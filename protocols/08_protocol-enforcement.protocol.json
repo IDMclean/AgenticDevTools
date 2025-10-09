@@ -1,0 +1,14 @@
+{
+  "protocol_id": "enforcement-protocol-001",
+  "description": "A protocol that mandates the programmatic verification of FDC adherence before task submission.",
+  "rules": [
+    {
+      "rule_id": "mandatory-pre-submission-validation",
+      "description": "Before submitting work, the agent MUST run the `tooling/protocol_enforcer.py` script against the current task's ID. The script MUST exit with a status code of 0 (success). A non-zero exit code indicates a protocol violation, which MUST be corrected before submission is attempted.",
+      "enforcement": "This rule is enforced by the agent's own pre-commit checklist and its core logic. A failed check programmatically blocks the `submit` action."
+    }
+  ],
+  "associated_tools": [
+    "tooling/protocol_enforcer.py"
+  ]
+}

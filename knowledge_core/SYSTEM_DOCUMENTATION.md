@@ -210,6 +210,15 @@ This process ensures that `AGENTS.md` and other protocol documents are not edite
 manually but are instead generated from a validated, single source of truth,
 making the agent's protocols robust, verifiable, and maintainable.
 
+### `tooling/protocol_enforcer.py`
+
+Validates the sequence of actions for a given task against the FDC FSM.
+
+This script reads the activity log, filters for a specific task ID, and
+replays the actions against the FSM definition to ensure protocol adherence.
+It is intended to be used as a pre-submission check to programmatically
+enforce the development protocol.
+
 ### `tooling/research.py`
 
 A unified, constraint-based interface for all research and data-gathering operations.
@@ -375,6 +384,10 @@ The suite is divided into two main classes:
     - Using the Plan Registry to call sub-plans by a logical name.
     - Verifying that the system correctly halts when the maximum recursion
       depth is exceeded, ensuring decidability.
+
+### `tooling/test_protocol_enforcer.py`
+
+_No module-level docstring found._
 
 ### `tooling/test_self_improvement_cli.py`
 
