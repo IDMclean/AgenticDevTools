@@ -1,6 +1,21 @@
 # Makefile for project standards and validation
 
-.PHONY: install format lint validate-protocol
+.PHONY: all build build-protocol install format lint
+
+# ==============================================================================
+# Main Targets
+# ==============================================================================
+all: build
+
+build: build-protocol
+	@echo "--> Build complete."
+
+# ==============================================================================
+# Protocol Compilation
+# ==============================================================================
+build-protocol:
+	@echo "--> Compiling AGENTS.md from protocol sources..."
+	@python3 tooling/protocol_compiler.py
 
 # ==============================================================================
 # Dependency Management
@@ -19,10 +34,3 @@ format:
 lint:
 	@echo "--> Linting Python code with flake8..."
 	@flake8 .
-
-# ==============================================================================
-# Protocol Validation
-# ==============================================================================
-validate-protocol:
-	@echo "--> Validating protocol file presence and naming..."
-	@python3 tooling/protocol_validator.py

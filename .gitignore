@@ -109,3 +109,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Generated protocol file
+AGENTS.md

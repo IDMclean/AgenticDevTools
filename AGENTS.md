@@ -23,7 +23,6 @@ The Orchestrator is the master Finite State Machine (FSM) that guides the agent 
 
 **The Orchestrator's Critical Role in Planning:**
 During the `PLANNING` state, the Orchestrator's most important job is to validate the agent-generated `plan.txt`. It does this by calling the FDC Toolchain's `lint` command. **A plan that fails this check will halt the entire process, preventing the agent from entering an invalid state.**
-
 ### Layer 2: The FDC Toolchain (`fdc_cli.py` & `fdc_fsm.json`)
 
 The FDC Toolchain is a set of utilities that the agent uses to structure its work and that the Orchestrator uses for validation. The toolchain is governed by its own FSM (`tooling/fdc_fsm.json`), which defines the legal sequence of commands *within a plan*.
@@ -47,7 +46,6 @@ The FDC Toolchain is a set of utilities that the agent uses to structure its wor
 *   **Usage:** The **last command** in any valid plan.
 *   **Command:** `run_in_bash_session python3 tooling/fdc_cli.py close --task-id "your-task-id"`
 *   **Function:** Logs `TASK_END`, generates a post-mortem template, and signals to the Orchestrator that plan execution is complete.
-
 ---
 ### STANDING ORDERS
 
