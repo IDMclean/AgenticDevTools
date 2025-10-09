@@ -15,13 +15,16 @@ def main():
 
         if not os.path.isdir(protocols_dir):
             print(f"Error: Source directory '{protocols_dir}' not found.", file=sys.stderr)
+            print("Please create it and add protocol source files.", file=sys.stderr)
             sys.exit(1)
 
         # Get all .md files and sort them alphabetically to ensure correct order
         protocol_files = sorted([f for f in os.listdir(protocols_dir) if f.endswith('.md')])
 
         if not protocol_files:
-            print(f"Warning: No protocol files found in '{protocols_dir}'.", file=sys.stderr)
+            print(f"Warning: No protocol files found in '{protocols_dir}'. AGENTS.md will be empty.", file=sys.stderr)
+            # Create an empty AGENTS.md
+            open(output_file_path, 'w').close()
             return
 
         # Read and concatenate the content of each file
@@ -29,6 +32,7 @@ def main():
         for filename in protocol_files:
             filepath = os.path.join(protocols_dir, filename)
             with open(filepath, 'r') as f:
+                # Add a newline to ensure separation between file contents
                 full_protocol_content += f.read() + "\n"
 
         # Write the combined content to the output file

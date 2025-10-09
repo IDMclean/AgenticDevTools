@@ -1,5 +1,3 @@
-## 2. The Solution: A Two-Layered FSM System
-
 ### Layer 1: The Orchestrator (`master_control.py` & `fsm.json`)
 
 The Orchestrator is the master Finite State Machine (FSM) that guides the agent through its entire lifecycle, from orientation to submission. It is not directly controlled by the agent's plan but rather directs the agent's state based on the successful completion of each phase.

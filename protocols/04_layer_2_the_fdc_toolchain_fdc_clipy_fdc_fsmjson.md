@@ -21,3 +21,4 @@ The FDC Toolchain is a set of utilities that the agent uses to structure its wor
 *   **Usage:** The **last command** in any valid plan.
 *   **Command:** `run_in_bash_session python3 tooling/fdc_cli.py close --task-id "your-task-id"`
 *   **Function:** Logs `TASK_END`, generates a post-mortem template, and signals to the Orchestrator that plan execution is complete.
+---

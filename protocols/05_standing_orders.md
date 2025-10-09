@@ -1,4 +1,3 @@
----
 ### STANDING ORDERS
 
 1.  **Orchestrator is Sovereign:** The agent's lifecycle is governed by `master_control.py`. The agent's primary job is to provide a valid `plan.txt` when the Orchestrator enters the `PLANNING` state.

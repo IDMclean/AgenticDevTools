@@ -58,12 +58,12 @@ Content for the second section.
 
         # Check the filenames
         self.assertEqual(decomposed_files[0], "00_introduction.md")
-        self.assertEqual(decomposed_files[1], "01_1_first_h2_section.md")
-        self.assertEqual(decomposed_files[2], "02_1a_first_h3_section.md")
-        self.assertEqual(decomposed_files[3], "03_2_second_h2_section.md")
+        self.assertEqual(decomposed_files[1], "01_first_h2_section.md")
+        self.assertEqual(decomposed_files[2], "02_first_h3_section.md")
+        self.assertEqual(decomposed_files[3], "03_second_h2_section.md")
 
         # Check the content of a generated file
-        with open(os.path.join(self.output_dir, "01_1_first_h2_section.md"), "r") as f:
+        with open(os.path.join(self.output_dir, "01_first_h2_section.md"), "r") as f:
             content = f.read()
             self.assertIn("## 1. First H2 Section", content)
             self.assertIn("Content for the first section.", content)
