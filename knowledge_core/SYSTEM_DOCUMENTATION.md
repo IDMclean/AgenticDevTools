@@ -108,6 +108,10 @@ improved in future tasks.
 The script is executed via the command line, taking the path to a completed
 post-mortem file as its primary argument.
 
+### `tooling/log_failure.py`
+
+_No module-level docstring found._
+
 ### `tooling/master_control.py`
 
 The master orchestrator for the agent's lifecycle, governed by a Finite State Machine.
@@ -179,11 +183,6 @@ The auditor currently performs two main checks:
 2.  **Tool Centrality:** It conducts a frequency analysis of the tools used,
     helping to identify which tools are most critical to the agent's workflow.
 
-NOTE: The current implementation has known issues. It incorrectly parses the
-`AGENTS.md` file by only reading the first JSON block and relies on a non-standard
-log file. It requires modification to parse all JSON blocks and use the correct
-`logs/activity.log.jsonl` file to be effective.
-
 ### `tooling/protocol_compiler.py`
 
 Compiles source protocol files into unified, human-readable and machine-readable artifacts.
@@ -221,21 +220,6 @@ workflow.
 
 The tool operates on the .protocol.json files located in the `protocols/`
 directory, performing targeted updates based on command-line arguments.
-
-### `tooling/readme_generator.py`
-
-Generates the project's main README.md from protocol documentation.
-
-This script scans the 'protocols/' directory for markdown files (`.protocol.md`),
-concatenates them in a sorted order, and writes the final output to the
-root-level README.md file. This ensures the README always reflects the
-latest protocol definitions, providing a single source of truth for the
-project's operational guidelines.
-
-Configuration is managed via top-level constants:
-- `PROTOCOLS_DIR`: The directory where source protocol files are stored.
-- `OUTPUT_FILE`: The path to the generated README.md file.
-- `README_TITLE`: The main title for the generated README.
 
 ### `tooling/research.py`
 
@@ -386,22 +370,22 @@ expected JSON schema, including having unique IDs and a 'pending' status.
 
 Integration tests for the master control FSM and CFDC workflow.
 
-This test suite provides end-to-end validation of the `master_control.py`
-orchestrator. It uses a multi-threaded approach to simulate the interactive
-nature of the agent's workflow, where the FSM runs in one thread and the test
-script acts as the "agent" in the main thread, creating files like `plan.txt`
-and `step_complete.txt` to drive the FSM through its states.
+This test suite has been redesigned to be single-threaded and deterministic,
+eliminating the file-polling, multi-threaded architecture that was causing
+timeouts and instability in the test environment.
 
-The suite is divided into two main classes:
-- `TestMasterControlGraphFullWorkflow`: Validates the entire "atomic" workflow
-  from orientation through planning, execution, analysis, and post-mortem,
-  ensuring the FSM transitions correctly through all its states.
-- `TestCFDCWorkflow`: Focuses specifically on the Context-Free Development
-  Cycle features, including:
-    - Executing hierarchical plans using the `call_plan` directive.
-    - Using the Plan Registry to call sub-plans by a logical name.
-    - Verifying that the system correctly halts when the maximum recursion
-      depth is exceeded, ensuring decidability.
+The key principles of this new design are:
+- **No `time.sleep`:** All forms of waiting are removed.
+- **No `threading`:** The tests run in a single, predictable thread.
+- **Direct State Manipulation:** The tests directly call the FSM's state-handler
+  methods (e.g., `do_planning`, `do_execution`) instead of running the FSM's
+  main loop.
+- **Mocking Filesystem I/O:** `os.path.exists` and other file operations that
+  the FSM uses for polling are mocked. This gives the test complete and
+  instantaneous control over the FSM's state transitions.
+- **Hermetic Environment:** All tests run inside a temporary directory, and all
+  necessary dependencies from the repository are copied into it, ensuring tests
+  do not have side effects and do not rely on the external state of the repo.
 
 ### `tooling/test_protocol_auditor.py`
 

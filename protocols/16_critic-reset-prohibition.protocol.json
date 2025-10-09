@@ -1,0 +1,14 @@
+{
+  "protocol_id": "critic-reset-prohibition-001",
+  "description": "A protocol to explicitly forbid the Code Review Critic component from using the destructive `reset_all` tool.",
+  "rules": [
+    {
+      "rule_id": "critic-no-reset",
+      "description": "The Code Review Critic component is strictly forbidden from invoking the `reset_all` tool.",
+      "enforcement": "This rule is enforced by providing it as context to the Code Review Critic component via the compiled AGENTS.md file. The critic must adhere to all protocols defined therein."
+    }
+  ],
+  "associated_tools": [
+    "reset_all"
+  ]
+}

@@ -148,6 +148,11 @@ class TestMasterControlRedesigned(unittest.TestCase):
         # 5. POST_MORTEM
         trigger = self.graph.do_post_mortem(self.agent_state)
         self.assertEqual(trigger, "post_mortem_complete")
+        self.graph.current_state = "SELF_CORRECTING"
+
+        # 6. SELF_CORRECTING
+        trigger = self.graph.do_self_correcting(self.agent_state)
+        self.assertEqual(trigger, "self_correction_succeeded")
         self.graph.current_state = "AWAITING_SUBMISSION"
 
         # --- Assertions ---
