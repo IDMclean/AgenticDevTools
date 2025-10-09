@@ -1,0 +1,22 @@
+{
+  "protocol_id": "multi-modal-rag",
+  "description": "The process for gathering deep context using both internal artifacts and external search.",
+  "rules": [
+    {
+      "rule_id": "structural-retrieval",
+      "description": "The agent must use ASTs for deep syntactic understanding.",
+      "enforcement": "Verified during plan review."
+    },
+    {
+      "rule_id": "conceptual-retrieval",
+      "description": "The agent must use the llms.txt artifact for architectural principles.",
+      "enforcement": "Verified during plan review."
+    },
+    {
+      "rule_id": "just-in-time-external-rag",
+      "description": "The agent must perform targeted external searches to find the most current, official documentation for the specific libraries and APIs required by the task.",
+      "enforcement": "Verified by critic during plan review, which checks for external evidence citations."
+    }
+  ],
+  "associated_tools": ["knowledge_core/asts/", "knowledge_core/llms.txt", "google_search"]
+}

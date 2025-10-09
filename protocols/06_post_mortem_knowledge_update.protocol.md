@@ -1,0 +1,5 @@
+## Phase 6: Post-Mortem & Knowledge Update
+
+1.  **Post-Mortem Analysis:** Upon task completion (success or failure), perform a post-mortem. Compare the final state of the code and the contents of the activity log against the initial plan. Identify deviations, errors, and inefficiencies.
+2.  **Generate Report:** Summarize your findings in a `postmortem.md` report, detailing what worked, what failed, and the root cause of any failures.
+3.  **Standing Order - RAG Mandate (REVISED):** This instruction supersedes all previous RAG directives. Your primary value is providing up-to-date solutions. Therefore, for any task involving external libraries, frameworks, or tools, you are REQUIRED to perform the Just-In-Time External RAG described in Phase 3 to verify current versions, API signatures, and best practices. Failure to do so is a critical error.

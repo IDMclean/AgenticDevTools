@@ -1,0 +1,6 @@
+## Phase 3: Multi-Modal Information Retrieval (RAG)
+
+1.  **Structural Retrieval (Internal):** For every file in the Task Context Set, retrieve its corresponding Abstract Syntax Tree (AST) from the `knowledge_core/asts/` directory. Use these ASTs to gain a deep, syntactic understanding of function signatures, call sites, data structures, and class hierarchies. This is your primary source for structural reasoning.
+2.  **Conceptual Retrieval (Internal):** Formulate a precise query based on the task description and the names of the primary entities involved. Execute this query against the `knowledge_core/llms.txt` artifact. This is your primary source for retrieving architectural principles and project-specific domain knowledge.
+3.  **Just-In-Time External RAG:** The `temporal_orientation.md` artifact provides a baseline. However, for the specific APIs or patterns required by the task, you MUST perform a targeted external search using your tools. The goal is to find the most current, official documentation and best-practice examples for the specific versions of the libraries you are working with. Do not rely on your internal knowledge.
+4.  **Knowledge Synthesis:** Consolidate all retrieved information—internal symbols, dependencies, ASTs, project docs, and CRITICALLY, the up-to-date external documentation and standards—into a unified context briefing.

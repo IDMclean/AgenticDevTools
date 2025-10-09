@@ -1,0 +1,17 @@
+{
+  "protocol_id": "post-mortem-knowledge-update",
+  "description": "The process for analyzing a completed task and generating lessons for future improvement.",
+  "rules": [
+    {
+      "rule_id": "post-mortem-analysis",
+      "description": "The agent must perform a post-mortem analysis, comparing the final state of the code and the activity log against the initial plan.",
+      "enforcement": "Agent's core logic following task completion."
+    },
+    {
+      "rule_id": "rag-mandate-revised",
+      "description": "The agent is required to perform Just-In-Time External RAG to verify current versions, API signatures, and best practices for any external libraries, frameworks, or tools.",
+      "enforcement": "Core principle of the agent's operation, checked during planning."
+    }
+  ],
+  "associated_tools": ["postmortem.md"]
+}

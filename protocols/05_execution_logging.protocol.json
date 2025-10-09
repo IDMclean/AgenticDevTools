@@ -1,0 +1,12 @@
+{
+  "protocol_id": "execution-logging",
+  "description": "The process for executing a validated plan and recording actions in a structured log.",
+  "rules": [
+    {
+      "rule_id": "structured-logging-mandate",
+      "description": "For every action taken, the agent must record a structured log entry to logs/activity.log.jsonl conforming to the schema.",
+      "enforcement": "Enforced by the execution wrapper."
+    }
+  ],
+  "associated_tools": ["tooling/execution_wrapper.py", "LOGGING_SCHEMA.md"]
+}

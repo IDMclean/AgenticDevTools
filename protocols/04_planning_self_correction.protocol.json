@@ -1,0 +1,16 @@
+{
+  "protocol_id": "planning-self-correction",
+  "description": "The process for generating, citing, and refining a plan before execution.",
+  "rules": [
+    {
+      "rule_id": "evidence-citation-mandate",
+      "description": "Each step in a plan must be justified with a citation to the source that justifies the action, especially for external standards.",
+      "enforcement": "Verified by the internal critic model."
+    },
+    {
+      "rule_id": "critical-review",
+      "description": "The agent must engage its internal critic to act as a verifier for the plan against the cited evidence.",
+      "enforcement": "Core loop of the agent's planning phase."
+    }
+  ]
+}
