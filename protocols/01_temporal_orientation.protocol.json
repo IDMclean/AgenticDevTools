@@ -1,0 +1,17 @@
+{
+  "protocol_id": "temporal-orientation",
+  "description": "Defines the process for the agent to orient itself with the current state of external technologies.",
+  "rules": [
+    {
+      "rule_id": "external-awareness-mandate",
+      "description": "The agent MUST assume its internal knowledge of external technologies is outdated and use search tools to get current information.",
+      "enforcement": "Agent's planning phase, verified by critic."
+    },
+    {
+      "rule_id": "pre-task-orientation",
+      "description": "The agent must consult the temporal_orientation.md artifact at the start of every task.",
+      "enforcement": "Agent's core operational loop."
+    }
+  ],
+  "associated_tools": ["tooling/temporal_orienter.py", "google_search", "view_text_website"]
+}

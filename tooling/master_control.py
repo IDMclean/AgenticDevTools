@@ -67,7 +67,7 @@ class MasterControlGraph:
             error_message = f"Plan validation failed:\n{result.stderr}"
             agent_state.error = error_message
             print(f"[MasterControl] {error_message}")
-            return self.get_trigger("PLANNING", "ERROR")
+            return "planning_failed"
 
         print("  - Plan validation successful.")
         with open(plan_file, "r") as f:
@@ -85,7 +85,7 @@ class MasterControlGraph:
         )
         print("[MasterControl] Planning Complete.")
         # We keep plan.txt for now for traceability during execution
-        return self.get_trigger("PLANNING", "EXECUTING")
+        return "plan_is_set"
 
     def do_execution(self, agent_state: AgentState) -> str:
         """
@@ -98,7 +98,7 @@ class MasterControlGraph:
             # Clean up the root plan file now that execution is fully complete
             if os.path.exists("plan.txt"):
                 os.remove("plan.txt")
-            return self.get_trigger("EXECUTING", "AWAITING_ANALYSIS")
+            return "all_steps_completed"
 
         # Always work with the plan at the top of the stack
         current_context = agent_state.plan_stack[-1]
@@ -111,7 +111,7 @@ class MasterControlGraph:
                 f"  - Finished sub-plan '{current_context.plan_path}'. Resuming parent."
             )
             # Re-enter the execution loop immediately to process the parent plan
-            return self.get_trigger("EXECUTING", "EXECUTING")
+            return "step_succeeded"
 
         step = plan_steps[current_context.current_step].strip()
         command, *args = step.split()
@@ -121,7 +121,7 @@ class MasterControlGraph:
             if len(agent_state.plan_stack) > MAX_RECURSION_DEPTH:
                 agent_state.error = f"Maximum recursion depth ({MAX_RECURSION_DEPTH}) exceeded."
                 print(f"[MasterControl] Error: {agent_state.error}")
-                return self.get_trigger("EXECUTING", "ERROR")
+                return "execution_failed"
 
             sub_plan_path = args[0]
             print(f"  - Calling sub-plan: {sub_plan_path}")
@@ -133,7 +133,7 @@ class MasterControlGraph:
             except FileNotFoundError:
                 agent_state.error = f"Sub-plan file not found: {sub_plan_path}"
                 print(f"[MasterControl] Error: {agent_state.error}")
-                return self.get_trigger("EXECUTING", "ERROR")
+                return "execution_failed"
 
             # Advance the current plan's step *before* pushing the new one
             current_context.current_step += 1
@@ -143,7 +143,7 @@ class MasterControlGraph:
                 plan_path=sub_plan_path, plan_content=sub_plan_content
             )
             agent_state.plan_stack.append(new_context)
-            return self.get_trigger("EXECUTING", "EXECUTING")
+            return "step_succeeded"
 
         # --- Standard Step Execution ---
         step_complete_file = "step_complete.txt"
@@ -168,7 +168,7 @@ class MasterControlGraph:
         print(
             f"  - Step {current_context.current_step} of {len(plan_steps)} in '{current_context.plan_path}' signaled complete."
         )
-        return self.get_trigger("EXECUTING", "EXECUTING")
+        return "step_succeeded"
 
     def do_awaiting_analysis(self, agent_state: AgentState) -> str:
         """Creates a draft post-mortem and waits for analysis."""

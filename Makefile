@@ -45,10 +45,18 @@ docs:
 	@python3 tooling/doc_generator.py
 
 # ==============================================================================
+# README Generation
+# ==============================================================================
+.PHONY: build-readme
+build-readme:
+	@echo "--> Generating README.md from source documentation..."
+	@python3 tooling/readme_generator.py
+
+# ==============================================================================
 # Main Targets
 # ==============================================================================
 # A general build target that compiles protocols and generates documentation.
-build: compile-protocols docs
+build: compile-protocols docs build-readme
 
 clean:
 	@echo "--> Removing compiled protocol and documentation artifacts..."

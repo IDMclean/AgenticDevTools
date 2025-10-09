@@ -1,31 +1,223 @@
-Subject: Jules Agent Protocol v1.0
-Objective: To provide a systematic protocol for task execution, self-correction, and knowledge acquisition within this repository. Adherence to this protocol is mandatory for all operations.
-Phase 1: Temporal Orientation (Scheduled & Ad-Hoc)
-1. Mandate for External Awareness: Your internal knowledge base is frozen as of late 2022.3 You MUST assume it is outdated for all external technologies, libraries, and frameworks. Your primary source of truth for current standards and best practices is the live internet, accessed via your search tools.
-2. Scheduled Orientation Refresh: A separate, automated process (temporal-orientation-refresh.yml) will run on a recurring basis (e.g., weekly). This process will:
-   * Scan the repository's manifest files (package.json, Cargo.toml, etc.) to identify all primary external dependencies.
-   * For each major dependency, use external search tools to retrieve the latest version number, links to official documentation, and summaries of significant changes since late 2022.
-   * Synthesize this information into a structured report and overwrite the knowledge_core/temporal_orientation.md artifact. This artifact serves as your cached "map of the present."
-3. Pre-Task Orientation Check: At the beginning of EVERY new task, you must first consult knowledge_core/temporal_orientation.md to understand the current landscape of the technologies relevant to the task.
-Phase 2: Deconstruction & Internal Contextualization
-1. Task Ingestion: Receive the user-provided task.
-2. Entity Identification: Identify all candidate code entities (functions, classes, modules, files) relevant to the task description. Perform a keyword and semantic search against the knowledge_core/symbols.json artifact to resolve these candidates to concrete symbols and their exact locations (file path, line number).
-3. Impact Analysis: Using the file paths identified in the previous step as a starting point, construct a dependency impact analysis. Query the knowledge_core/dependency_graph.json artifact to identify all immediate upstream dependents (code that will be affected by changes) and downstream dependencies (code that the target entities rely on). The set of all identified files constitutes the "Task Context Set."
-Phase 3: Multi-Modal Information Retrieval (RAG)
-1. Structural Retrieval (Internal): For every file in the Task Context Set, retrieve its corresponding Abstract Syntax Tree (AST) from the knowledge_core/asts/ directory. Use these ASTs to gain a deep, syntactic understanding of function signatures, call sites, data structures, and class hierarchies. This is your primary source for structural reasoning.
-2. Conceptual Retrieval (Internal): Formulate a precise query based on the task description and the names of the primary entities involved. Execute this query against the knowledge_core/llms.txt artifact. This is your primary source for retrieving architectural principles and project-specific domain knowledge (e.g., details of the non-classical logic).
-3. Just-In-Time External RAG: The temporal_orientation.md artifact provides a baseline. However, for the specific APIs or patterns required by the task, you MUST perform a targeted external search using your tools. The goal is to find the most current, official documentation and best-practice examples for the specific versions of the libraries you are working with. Do not rely on your internal knowledge.
-4. Knowledge Synthesis: Consolidate all retrieved information—internal symbols, dependencies, ASTs, project docs, and CRITICALLY, the up-to-date external documentation and standards—into a unified context briefing.
-Phase 4: Planning & Self-Correction
-1. Plan Generation: Based on the synthesized context briefing, generate a detailed, step-by-step execution plan. The plan must be granular, with each step representing a single, atomic action (e.g., "Read file X," "Modify function Y in file Z," "Execute test suite for package A").
-2. Evidence Citation: For each step in the plan, you MUST provide a citation to the source that justifies the action. Citations for external standards are mandatory.
-   * (Example) "Step 3: Refactor the dataFetcher component to use the React use Hook. Justification: External RAG query on 'React data fetching best practices 2025' and review of official react.dev documentation confirms use is the current standard for integrating promises in components. This supersedes older patterns found in my training data."
-3. Critical Review: Engage your internal critic model. The critic's function is to act as a verifier. It must check every step of the plan against the cited evidence, with special attention to validating claims about external best practices against the retrieved search results.
-4. Plan Refinement: Re-evaluate and iteratively refine the plan based on the critic's feedback until all steps are validated and justified by the retrieved context.
-Phase 5: Execution & Logging
-1. Execute Plan: Execute the validated plan step-by-step.
-2. Structured Logging: For every action taken (e.g., FILE_READ, FILE_WRITE, TOOL_EXEC, EXTERNAL_RAG_QUERY), you MUST record a structured log entry to logs/activity.log.jsonl. The log entry must conform to the schema defined in LOGGING_SCHEMA.md and include any external search queries performed.
-Phase 6: Post-Mortem & Knowledge Update
-1. Post-Mortem Analysis: Upon task completion (success or failure), perform a post-mortem. Compare the final state of the code and the contents of the activity log against the initial plan. Identify deviations, errors, and inefficiencies.
-2. Generate Report: Summarize your findings in a postmortem.md report, detailing what worked, what failed, and the root cause of any failures.
-3. Standing Order - RAG Mandate (REVISED): This instruction supersedes all previous RAG directives. Your primary value is providing up-to-date solutions. Therefore, for any task involving external libraries, frameworks, or tools, you are REQUIRED to perform the Just-In-Time External RAG described in Phase 3 to verify current versions, API signatures, and best practices. Failure to do so is a critical error.
+# ---
+# DO NOT EDIT THIS FILE DIRECTLY.
+# This file is programmatically generated by the `protocol_compiler.py` script.
+# All changes to agent protocols must be made in the source files
+# located in the `protocols/` directory.
+#
+# This file contains the compiled protocols in a human-readable Markdown format,
+# with machine-readable JSON definitions embedded.
+# ---
+
+
+# Jules Agent Protocol v1.0
+
+**Objective:** To provide a systematic protocol for task execution, self-correction, and knowledge acquisition within this repository. Adherence to this protocol is mandatory for all operations.
+```json
+{
+  "protocol_id": "protocol-introduction",
+  "description": "The high-level objective and mandatory nature of the agent protocol.",
+  "rules": [
+    {
+      "rule_id": "protocol-objective",
+      "description": "To provide a systematic protocol for task execution, self-correction, and knowledge acquisition.",
+      "enforcement": "Architectural design and agent's core operational loop."
+    },
+    {
+      "rule_id": "mandatory-adherence",
+      "description": "Adherence to this protocol is mandatory for all operations.",
+      "enforcement": "Validation toolchains and core FSM logic."
+    }
+  ]
+}
+```
+
+
+---
+
+## Phase 1: Temporal Orientation (Scheduled & Ad-Hoc)
+
+1.  **Mandate for External Awareness:** Your internal knowledge base is frozen as of late 2022. You MUST assume it is outdated for all external technologies, libraries, and frameworks. Your primary source of truth for current standards and best practices is the live internet, accessed via your search tools.
+2.  **Scheduled Orientation Refresh:** A separate, automated process (`tooling/temporal_orienter.py`) will run on a recurring basis. This process will:
+    *   Scan the repository's manifest files to identify all primary external dependencies.
+    *   For each major dependency, use external search tools to retrieve the latest version number, links to official documentation, and summaries of significant changes since late 2022.
+    *   Synthesize this information into a structured report and overwrite the `knowledge_core/temporal_orientation.md` artifact. This artifact serves as your cached "map of the present."
+3.  **Pre-Task Orientation Check:** At the beginning of EVERY new task, you must first consult `knowledge_core/temporal_orientation.md` to understand the current landscape of the technologies relevant to the task.
+```json
+{
+  "protocol_id": "temporal-orientation",
+  "description": "Defines the process for the agent to orient itself with the current state of external technologies.",
+  "rules": [
+    {
+      "rule_id": "external-awareness-mandate",
+      "description": "The agent MUST assume its internal knowledge of external technologies is outdated and use search tools to get current information.",
+      "enforcement": "Agent's planning phase, verified by critic."
+    },
+    {
+      "rule_id": "pre-task-orientation",
+      "description": "The agent must consult the temporal_orientation.md artifact at the start of every task.",
+      "enforcement": "Agent's core operational loop."
+    }
+  ],
+  "associated_tools": [
+    "tooling/temporal_orienter.py",
+    "google_search",
+    "view_text_website"
+  ]
+}
+```
+
+
+---
+
+## Phase 2: Deconstruction & Internal Contextualization
+
+1.  **Task Ingestion:** Receive the user-provided task.
+2.  **Entity Identification:** Identify all candidate code entities (functions, classes, modules, files) relevant to the task description. Perform a keyword and semantic search against the `knowledge_core/symbols.json` artifact to resolve these candidates to concrete symbols and their exact locations (file path, line number).
+3.  **Impact Analysis:** Using the file paths identified in the previous step as a starting point, construct a dependency impact analysis. Query the `knowledge_core/dependency_graph.json` artifact to identify all immediate upstream dependents (code that will be affected by changes) and downstream dependencies (code that the target entities rely on). The set of all identified files constitutes the "Task Context Set."
+```json
+{
+  "protocol_id": "deconstruction-contextualization",
+  "description": "The process for deconstructing a task and building internal context using the Knowledge Core.",
+  "rules": [
+    {
+      "rule_id": "entity-identification",
+      "description": "The agent must use the symbol map to identify relevant code entities.",
+      "enforcement": "Verified during plan review."
+    },
+    {
+      "rule_id": "impact-analysis",
+      "description": "The agent must use the dependency graph to analyze the impact of changes.",
+      "enforcement": "Verified during plan review."
+    }
+  ],
+  "associated_tools": [
+    "knowledge_core/symbols.json",
+    "knowledge_core/dependency_graph.json"
+  ]
+}
+```
+
+
+---
+
+## Phase 3: Multi-Modal Information Retrieval (RAG)
+
+1.  **Structural Retrieval (Internal):** For every file in the Task Context Set, retrieve its corresponding Abstract Syntax Tree (AST) from the `knowledge_core/asts/` directory. Use these ASTs to gain a deep, syntactic understanding of function signatures, call sites, data structures, and class hierarchies. This is your primary source for structural reasoning.
+2.  **Conceptual Retrieval (Internal):** Formulate a precise query based on the task description and the names of the primary entities involved. Execute this query against the `knowledge_core/llms.txt` artifact. This is your primary source for retrieving architectural principles and project-specific domain knowledge.
+3.  **Just-In-Time External RAG:** The `temporal_orientation.md` artifact provides a baseline. However, for the specific APIs or patterns required by the task, you MUST perform a targeted external search using your tools. The goal is to find the most current, official documentation and best-practice examples for the specific versions of the libraries you are working with. Do not rely on your internal knowledge.
+4.  **Knowledge Synthesis:** Consolidate all retrieved information—internal symbols, dependencies, ASTs, project docs, and CRITICALLY, the up-to-date external documentation and standards—into a unified context briefing.
+```json
+{
+  "protocol_id": "multi-modal-rag",
+  "description": "The process for gathering deep context using both internal artifacts and external search.",
+  "rules": [
+    {
+      "rule_id": "structural-retrieval",
+      "description": "The agent must use ASTs for deep syntactic understanding.",
+      "enforcement": "Verified during plan review."
+    },
+    {
+      "rule_id": "conceptual-retrieval",
+      "description": "The agent must use the llms.txt artifact for architectural principles.",
+      "enforcement": "Verified during plan review."
+    },
+    {
+      "rule_id": "just-in-time-external-rag",
+      "description": "The agent must perform targeted external searches to find the most current, official documentation for the specific libraries and APIs required by the task.",
+      "enforcement": "Verified by critic during plan review, which checks for external evidence citations."
+    }
+  ],
+  "associated_tools": [
+    "knowledge_core/asts/",
+    "knowledge_core/llms.txt",
+    "google_search"
+  ]
+}
+```
+
+
+---
+
+## Phase 4: Planning & Self-Correction
+
+1.  **Plan Generation:** Based on the synthesized context briefing, generate a detailed, step-by-step execution plan. The plan must be granular, with each step representing a single, atomic action (e.g., "Read file X," "Modify function Y in file Z," "Execute test suite for package A").
+2.  **Evidence Citation:** For each step in the plan, you MUST provide a citation to the source that justifies the action. Citations for external standards are mandatory.
+    *   (Example) "Step 3: Refactor the dataFetcher component to use the React `use` Hook. Justification: External RAG query on 'React data fetching best practices 2025' and review of official react.dev documentation confirms `use` is the current standard for integrating promises in components. This supersedes older patterns found in my training data."
+3.  **Critical Review:** Engage your internal critic model. The critic's function is to act as a verifier. It must check every step of the plan against the cited evidence, with special attention to validating claims about external best practices against the retrieved search results.
+4.  **Plan Refinement:** Re-evaluate and iteratively refine the plan based on the critic's feedback until all steps are validated and justified by the retrieved context.
+```json
+{
+  "protocol_id": "planning-self-correction",
+  "description": "The process for generating, citing, and refining a plan before execution.",
+  "rules": [
+    {
+      "rule_id": "evidence-citation-mandate",
+      "description": "Each step in a plan must be justified with a citation to the source that justifies the action, especially for external standards.",
+      "enforcement": "Verified by the internal critic model."
+    },
+    {
+      "rule_id": "critical-review",
+      "description": "The agent must engage its internal critic to act as a verifier for the plan against the cited evidence.",
+      "enforcement": "Core loop of the agent's planning phase."
+    }
+  ]
+}
+```
+
+
+---
+
+## Phase 5: Execution & Logging
+
+1.  **Execute Plan:** Execute the validated plan step-by-step.
+2.  **Structured Logging:** For every action taken (e.g., `FILE_READ`, `FILE_WRITE`, `TOOL_EXEC`, `EXTERNAL_RAG_QUERY`), you MUST record a structured log entry to `logs/activity.log.jsonl`. The log entry must conform to the schema defined in `LOGGING_SCHEMA.md` and include any external search queries performed.
+```json
+{
+  "protocol_id": "execution-logging",
+  "description": "The process for executing a validated plan and recording actions in a structured log.",
+  "rules": [
+    {
+      "rule_id": "structured-logging-mandate",
+      "description": "For every action taken, the agent must record a structured log entry to logs/activity.log.jsonl conforming to the schema.",
+      "enforcement": "Enforced by the execution wrapper."
+    }
+  ],
+  "associated_tools": [
+    "tooling/execution_wrapper.py",
+    "LOGGING_SCHEMA.md"
+  ]
+}
+```
+
+
+---
+
+## Phase 6: Post-Mortem & Knowledge Update
+
+1.  **Post-Mortem Analysis:** Upon task completion (success or failure), perform a post-mortem. Compare the final state of the code and the contents of the activity log against the initial plan. Identify deviations, errors, and inefficiencies.
+2.  **Generate Report:** Summarize your findings in a `postmortem.md` report, detailing what worked, what failed, and the root cause of any failures.
+3.  **Standing Order - RAG Mandate (REVISED):** This instruction supersedes all previous RAG directives. Your primary value is providing up-to-date solutions. Therefore, for any task involving external libraries, frameworks, or tools, you are REQUIRED to perform the Just-In-Time External RAG described in Phase 3 to verify current versions, API signatures, and best practices. Failure to do so is a critical error.
+```json
+{
+  "protocol_id": "post-mortem-knowledge-update",
+  "description": "The process for analyzing a completed task and generating lessons for future improvement.",
+  "rules": [
+    {
+      "rule_id": "post-mortem-analysis",
+      "description": "The agent must perform a post-mortem analysis, comparing the final state of the code and the activity log against the initial plan.",
+      "enforcement": "Agent's core logic following task completion."
+    },
+    {
+      "rule_id": "rag-mandate-revised",
+      "description": "The agent is required to perform Just-In-Time External RAG to verify current versions, API signatures, and best practices for any external libraries, frameworks, or tools.",
+      "enforcement": "Core principle of the agent's operation, checked during planning."
+    }
+  ],
+  "associated_tools": [
+    "postmortem.md"
+  ]
+}
+```
+
+
+---

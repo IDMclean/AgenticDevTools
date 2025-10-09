@@ -1,0 +1,16 @@
+{
+  "protocol_id": "protocol-introduction",
+  "description": "The high-level objective and mandatory nature of the agent protocol.",
+  "rules": [
+    {
+      "rule_id": "protocol-objective",
+      "description": "To provide a systematic protocol for task execution, self-correction, and knowledge acquisition.",
+      "enforcement": "Architectural design and agent's core operational loop."
+    },
+    {
+      "rule_id": "mandatory-adherence",
+      "description": "Adherence to this protocol is mandatory for all operations.",
+      "enforcement": "Validation toolchains and core FSM logic."
+    }
+  ]
+}

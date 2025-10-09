@@ -101,9 +101,21 @@ class TestMasterControlGraphFullWorkflow(unittest.TestCase):
         with open(self.plan_file, "w") as f:
             f.write(test_plan)
 
-        # 5. Wait for the FSM to execute the plan and create the draft post-mortem.
-        # The new active execution model does not require manual signaling.
-        # We wait for the draft post-mortem file to appear.
+        # 5. Signal completion for each step in the plan to drive the FSM.
+        # The FSM uses an interactive model, waiting for 'step_complete.txt'.
+        time.sleep(1)  # Allow FSM to get to the execution loop
+        for i, step in enumerate(plan_steps):
+            # The test must manually perform the action the agent would have,
+            # like creating a file, before signaling completion.
+            if "create_file_with_block" in step:
+                with open(self.test_output_file, "w") as f:
+                    f.write("content")
+
+            with open("step_complete.txt", "w") as f:
+                f.write(f"Step {i+1} done: {step}")
+            time.sleep(1) # Give FSM time to process the step
+
+        # 6. Wait for the FSM to finish execution and create the draft post-mortem.
         timeout = 15  # seconds
         start_time = time.time()
         while not os.path.exists(self.draft_postmortem_file):

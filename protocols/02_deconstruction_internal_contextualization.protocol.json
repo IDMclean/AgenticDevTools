@@ -1,0 +1,17 @@
+{
+  "protocol_id": "deconstruction-contextualization",
+  "description": "The process for deconstructing a task and building internal context using the Knowledge Core.",
+  "rules": [
+    {
+      "rule_id": "entity-identification",
+      "description": "The agent must use the symbol map to identify relevant code entities.",
+      "enforcement": "Verified during plan review."
+    },
+    {
+      "rule_id": "impact-analysis",
+      "description": "The agent must use the dependency graph to analyze the impact of changes.",
+      "enforcement": "Verified during plan review."
+    }
+  ],
+  "associated_tools": ["knowledge_core/symbols.json", "knowledge_core/dependency_graph.json"]
+}
