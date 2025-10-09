@@ -11,6 +11,14 @@ sys.path.insert(0, "./tooling")
 from state import AgentState
 from research import execute_research_protocol
 
+# --- Constants ---
+FSM_PATH = "tooling/fsm.json"
+PLAN_FILE = "plan.txt"
+STEP_COMPLETE_FILE = "step_complete.txt"
+ANALYSIS_COMPLETE_FILE = "analysis_complete.txt"
+POSTMORTEM_TEMPLATE = "postmortem.md"
+POSTMORTEMS_DIR = "postmortems"
+
 
 class MasterControlGraph:
     """
@@ -19,7 +27,7 @@ class MasterControlGraph:
     ensuring that all protocol steps are followed in the correct order.
     """
 
-    def __init__(self, fsm_path: str = "tooling/fsm.json"):
+    def __init__(self, fsm_path: str = FSM_PATH):
         with open(fsm_path, "r") as f:
             self.fsm = json.load(f)
         self.current_state = self.fsm["initial_state"]
@@ -72,7 +80,6 @@ class MasterControlGraph:
 
             # L3: Environmental Probe
             print("  - Executing L3: Environmental Probe...")
-            # This would call the environmental_probe.py script in a real scenario
             agent_state.vm_capability_report = (
                 "Mock VM Capability Report: Filesystem OK, Network OK."
             )
@@ -91,30 +98,22 @@ class MasterControlGraph:
     def do_planning(self, agent_state: AgentState) -> str:
         """
         Waits for the agent to provide a plan, validates it, and transitions.
-
-        This node polls for `plan.txt`, validates it using `fdc_cli.py`,
-        and on success, loads the plan into the state and transitions.
-        On failure, it enters an error state.
         """
         print("[MasterControl] State: PLANNING")
-        plan_file = "plan.txt"
+        plan_file = PLAN_FILE
 
-        # Wait for the agent to create the plan file
-        print(f"  - Waiting for agent to create '{plan_file}'...")
+        print(f"  - [Orchestrator] WAITING FOR: '{plan_file}'...")
         while not os.path.exists(plan_file):
-            time.sleep(1)  # Poll every second
+            time.sleep(1)
 
         print(f"  - Detected '{plan_file}'. Reading and validating plan...")
-
-        # Validate the plan using the fdc_cli.py tool
-        validation_cmd = ["python3", "tooling/fdc_cli.py", "validate", plan_file]
+        validation_cmd = ["python3", "tooling/fdc_cli.py", "lint", plan_file]
         result = subprocess.run(validation_cmd, capture_output=True, text=True)
 
         if result.returncode != 0:
             error_message = f"Plan validation failed:\n{result.stderr}"
             agent_state.error = error_message
             print(f"[MasterControl] {error_message}")
-            # Note: We don't delete the plan file on failure so it can be inspected.
             return self.get_trigger("PLANNING", "ERROR")
 
         print("  - Plan validation successful.")
@@ -123,62 +122,45 @@ class MasterControlGraph:
 
         agent_state.plan = plan
         agent_state.messages.append(
-            {
-                "role": "system",
-                "content": f"Validated plan has been set from {plan_file}.",
-            }
+            {"role": "system", "content": f"Validated plan has been set from {plan_file}."}
         )
         print("[MasterControl] Planning Complete.")
-
-        # Clean up the plan file after successful validation
         os.remove(plan_file)
         print(f"  - Cleaned up '{plan_file}'.")
-
         return self.get_trigger("PLANNING", "EXECUTING")
 
     def do_execution(self, agent_state: AgentState) -> str:
         """
         Executes the plan step-by-step, waiting for agent confirmation.
-
-        This node processes the plan one step at a time. For each step, it
-        waits for the agent to create a `step_complete.txt` file, signaling
-        that the step's action has been performed.
+        This function now correctly transitions after the last step.
         """
         print("[MasterControl] State: EXECUTING")
-
-        # Filter out empty lines from the plan
         plan_steps = [step for step in agent_state.plan.split("\n") if step.strip()]
 
+        step = plan_steps[agent_state.current_step_index]
+        step_complete_file = STEP_COMPLETE_FILE
+
+        print(f"  - [Orchestrator] WAITING FOR: '{step_complete_file}' to complete step: {step}")
+        while not os.path.exists(step_complete_file):
+            time.sleep(1)
+
+        print(f"  - Detected '{step_complete_file}'.")
+        with open(step_complete_file, "r") as f:
+            result = f.read()
+
+        agent_state.messages.append(
+            {"role": "system", "content": f"Completed step {agent_state.current_step_index + 1}: {step}\nResult: {result}"}
+        )
+        os.remove(step_complete_file)
+        agent_state.current_step_index += 1
+        print(f"  - Step {agent_state.current_step_index} of {len(plan_steps)} signaled complete.")
+
+        # After incrementing, check if we are done.
         if agent_state.current_step_index < len(plan_steps):
-            step = plan_steps[agent_state.current_step_index]
-            step_complete_file = "step_complete.txt"
-
-            print(f"  - Waiting for agent to complete step: {step}")
-
-            # Wait for the agent to signal step completion
-            while not os.path.exists(step_complete_file):
-                time.sleep(1)
-
-            print(f"  - Detected '{step_complete_file}'.")
-            with open(step_complete_file, "r") as f:
-                result = f.read()
-
-            agent_state.messages.append(
-                {
-                    "role": "system",
-                    "content": f"Completed step {agent_state.current_step_index + 1}: {step}\nResult: {result}",
-                }
-            )
-
-            # Clean up the file and advance to the next step
-            os.remove(step_complete_file)
-            agent_state.current_step_index += 1
-
-            print(
-                f"  - Step {agent_state.current_step_index} of {len(plan_steps)} signaled complete."
-            )
+            # More steps remain, loop back to EXECUTING
             return self.get_trigger("EXECUTING", "EXECUTING")
         else:
+            # This was the last step, transition to the next phase
             print("[MasterControl] Execution Complete.")
             return self.get_trigger("EXECUTING", "AWAITING_ANALYSIS")
 
@@ -191,27 +173,21 @@ class MasterControlGraph:
         draft_path = f"DRAFT-{task_id}.md"
         agent_state.draft_postmortem_path = draft_path
 
-        # Create the draft file from the template
         try:
-            shutil.copyfile("postmortem.md", draft_path)
+            shutil.copyfile(POSTMORTEM_TEMPLATE, draft_path)
             print(f"  - Created draft post-mortem at '{draft_path}'.")
         except Exception as e:
             agent_state.error = f"Failed to create draft post-mortem: {e}"
             print(f"[MasterControl] {agent_state.error}")
-            return self.get_trigger("EXECUTING", "ERROR")  # Or a new trigger if needed
+            return self.get_trigger("EXECUTING", "ERROR")
 
-        # Wait for the agent to signal analysis is complete
-        analysis_complete_file = "analysis_complete.txt"
-        print(
-            f"  - Waiting for agent to complete analysis and create '{analysis_complete_file}'..."
-        )
+        analysis_complete_file = ANALYSIS_COMPLETE_FILE
+        print(f"  - [Orchestrator] WAITING FOR: '{analysis_complete_file}'...")
         while not os.path.exists(analysis_complete_file):
             time.sleep(1)
 
         os.remove(analysis_complete_file)
-        print(
-            f"  - Detected and cleaned up '{analysis_complete_file}'. Analysis complete."
-        )
+        print(f"  - Detected and cleaned up '{analysis_complete_file}'. Analysis complete.")
         return self.get_trigger("AWAITING_ANALYSIS", "POST_MORTEM")
 
     def do_post_mortem(self, agent_state: AgentState) -> str:
@@ -225,21 +201,18 @@ class MasterControlGraph:
             print(f"[MasterControl] {agent_state.error}")
             return self.get_trigger("POST_MORTEM", "ERROR")
 
-        # Create a safe, timestamped final path
         task_id = agent_state.task
         safe_task_id = "".join(c for c in task_id if c.isalnum() or c in ("-", "_"))
-        final_path = f"postmortems/{datetime.date.today()}-{safe_task_id}.md"
+        final_path = os.path.join(POSTMORTEMS_DIR, f"{datetime.date.today()}-{safe_task_id}.md")
 
         try:
+            os.makedirs(POSTMORTEMS_DIR, exist_ok=True)
             os.rename(draft_path, final_path)
-            report_message = (
-                f"Post-mortem analysis finalized. Report saved to '{final_path}'."
-            )
+            report_message = f"Post-mortem analysis finalized. Report saved to '{final_path}'."
             agent_state.final_report = report_message
             agent_state.messages.append({"role": "system", "content": report_message})
             print(f"[MasterControl] {report_message}")
 
-            # Automatically compile lessons learned from the new post-mortem
             print(f"  - Compiling lessons from '{final_path}'...")
             compile_cmd = ["python3", "tooling/knowledge_compiler.py", final_path]
             compile_result = subprocess.run(compile_cmd, capture_output=True, text=True)
@@ -251,7 +224,6 @@ class MasterControlGraph:
                 compile_msg = f"Knowledge compilation failed: {compile_result.stderr}"
                 print(f"  - {compile_msg}")
                 agent_state.messages.append({"role": "system", "content": compile_msg})
-                # For now, this is not a critical FSM failure.
 
         except Exception as e:
             agent_state.error = f"Failed to finalize post-mortem report: {e}"
@@ -270,6 +242,7 @@ class MasterControlGraph:
                 self.current_state = "ORIENTING"
                 continue
 
+            # This is the main execution loop for the FSM
             if self.current_state == "ORIENTING":
                 trigger = self.do_orientation(agent_state)
             elif self.current_state == "PLANNING":
@@ -285,7 +258,7 @@ class MasterControlGraph:
                 self.current_state = "ERROR"
                 break
 
-            # Find the next state based on the trigger
+            # Find the next state based on the trigger from the current state's action
             found_transition = False
             for transition in self.fsm["transitions"]:
                 if (
@@ -308,15 +281,10 @@ class MasterControlGraph:
 
 if __name__ == "__main__":
     print("--- Initializing Master Control Graph Demonstration ---")
-    # 1. Initialize the agent's state for a new task
     task = "Demonstrate the self-enforcing protocol."
     initial_state = AgentState(task=task)
-
-    # 2. Initialize and run the master control graph
     graph = MasterControlGraph()
     final_state = graph.run(initial_state)
-
-    # 3. Print the final report
     print("\n--- Final State ---")
     print(json.dumps(final_state.to_json(), indent=2))
     print("--- Demonstration Complete ---")

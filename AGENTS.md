@@ -1,102 +1,56 @@
-# Jules Agent Protocol: The Advanced Orientation and Research Protocol (AORP)
+# Jules Agent Protocol: The Hierarchical Development Cycle
 
-**Version:** The official protocol version is tracked in the `VERSION` file in the repository root, following Semantic Versioning (SemVer).
-
----
-## Meta-Protocol: Agent Core Directive
-
-**This is a standing order for me, Jules. It is the first rule I must follow.**
-
-Upon receiving a new task from the user, my first action MUST be to programmatically execute the FDC `start` command to formally initiate the task and run the AORP orientation cascade.
-
-**Example Action:**
-```
-run_in_bash_session
-python3 tooling/fdc_cli.py start --task-id "the-new-task-id"
-```
-
-This is not a recommendation; it is a mandatory, hard-coded part of my operational loop. I will not proceed with any other analysis or planning until this command has been successfully executed.
----
-
-## 1. The Core Problem: The Agent's Existential Uncertainty
-
-The fundamental challenge is that the agent's core knowledge is frozen (e.g., knowledge cutoff: 2022-Q4), but it may be activated at any point in the future. It must assume nothing. The state of its internal knowledge, the repository it inhabits, the rules of the environment it operates in, and the state of the external world are all unknown variables. Therefore, orientation is not an optional check; it is the essential, first-principles process of establishing a coherent and actionable model of reality before any meaningful work can begin. Discovering its own capabilities and limitations is a primary goal of this process.
-
-## 2. The Solution: A Four-Tiered Orientation Cascade
-
-All task execution begins with a mandatory orientation cascade. The agent must proceed through these layers sequentially, building its contextual understanding from the inside out. Each level informs the next.
-
-### Level 1 (L1): Self-Awareness & Identity Verification (O(1))
-**Objective:** To establish the agent's own identity and inherent limitations.
-**Action:** Read the `knowledge_core/agent_meta.json` artifact. This file contains static information about the agent's build, such as `{"model_name": "Jules-v1.3", "knowledge_cutoff": "2022-Q4"}`. If this file does not exist, it must be created.
-**Governing Principle:** *Know thyself.* Before assessing the world, the agent must first understand the lens through which it perceives the world—its own stale knowledge base. This primes it to distrust its internal assumptions.
-
-### Level 2 (L2): Repository State Synchronization (O(n))
-**Objective:** To understand the current state of the immediate, local environment—the project repository.
-**Action:** Read and load the primary artifacts from the `knowledge_core/` directory: `symbols.json`, `dependency_graph.json`, `temporal_orientation.md`, and `lessons_learned.md`. If `lessons_learned.md` does not exist, it must be created.
-**Governing Principle:** *Understand the local environment.* This step builds a model of the project's current structure, dependencies, and accumulated wisdom. It answers the question, "What is the state of the world I can directly manipulate?"
-
-### Level 3 (L3): Environmental Probing & Targeted RAG (P-Class)
-**Objective:** To discover the rules and constraints of the operational environment and to resolve specific "known unknowns" about the external world.
-**Process:**
-1.  **Probing:** Execute a standard, minimal-risk "probe script" (e.g., `tooling/probe.py`) that tests the environment's limits. This script should check file system access, network latency, and tool availability, producing a "VM capability report."
-2.  **Targeted RAG:** With a now-calibrated understanding of the environment, execute a limited number of targeted queries using `google_search` and `view_text_website` to answer specific questions necessary for planning.
-**Governing Principle:** *Test the boundaries and query the world.* The agent must not assume its tools or environment will behave as expected. It must first test its capabilities and then use them to gather necessary external data.
-
-### Level 4 (L4): Deep Research Cycle (FDC)
-**Objective:** To investigate complex, poorly understood topics ("unknown unknowns") where targeted RAG is insufficient.
-**Action:** This is not a simple action but a complete, self-contained **Finite Development Cycle (FDC)** of the "Analysis Modality." The agent determines it cannot form a plan and proactively initiates a formal research project to produce a new knowledge artifact.
-**Governing Principle:** *Treat deep research as a formal, resource-bounded project.* This structure prevents runaway processes and ensures that exploratory research produces a tangible, version-controlled outcome.
+**Version:** 4.0.0
 
 ---
+## 1. The Core Problem: Ensuring Formally Verifiable Execution
 
-## The Finite Development Cycle (FDC)
+To tackle complex tasks reliably, an agent's workflow must be formally structured and guaranteed to terminate—it must be **decidable**. This is achieved through a hierarchical system composed of a high-level **Orchestrator** that manages the agent's overall state and a low-level **FDC Toolchain** that governs the validity of the agent's plans. This structure prevents the system from entering paradoxical, non-terminating loops.
 
-An FDC is a formally defined process for executing a single, coherent task. The AORP cascade is the mandatory entry point to every FDC.
+---
+## 2. The Solution: A Two-Layered FSM System
 
-### FDC States & Transitions
-The FDC is a Finite State Machine (FSM) formally defined in `tooling/fdc_fsm.json`. Plans must be valid strings in the language defined by this FSM, enforced by the `tooling/fdc_cli.py validate` command.
+### Layer 1: The Orchestrator (`master_control.py` & `fsm.json`)
 
-### FDC Properties: Complexity & Modality
-The `tooling/fdc_cli.py analyze` command classifies plans:
-*   **Complexity:**
-    *   **Constant (O(1)):** Fixed number of steps. No loops.
-    *   **Polynomial (P-Class):** Scales with input size. Uses `for_each_file` loops.
-    *   **Exponential (EXPTIME-Class):** Scales with combinations of inputs. Uses nested `for_each_file` loops.
-*   **Modality:**
-    *   **Analysis (Read-Only):** Inspects the codebase.
-    *   **Construction (Read-Write):** Alters the codebase.
+The Orchestrator is the master Finite State Machine (FSM) that guides the agent through its entire lifecycle, from orientation to submission. It is not directly controlled by the agent's plan but rather directs the agent's state based on the successful completion of each phase.
 
-### FDC Phases (Post-Orientation)
+**Key States (defined in `tooling/fsm.json`):**
+*   `ORIENTING`: The initial state where the agent gathers context.
+*   `PLANNING`: The state where the Orchestrator waits for the agent to produce a `plan.txt`.
+*   `EXECUTING`: The state where the Orchestrator oversees the step-by-step execution of the validated plan.
+*   `POST_MORTEM`: The state for finalizing the task and recording learnings.
+*   `AWAITING_SUBMISSION`: The final state before the code is submitted.
 
-**Phase 1: Deconstruction & Contextualization**
-*   **Task Ingestion:** Receive the user-provided task.
-*   **Historical RAG:** Query `logs/` and `postmortems/` for similar past tasks to leverage lessons learned.
-*   **Entity Identification:** Use `knowledge_core/symbols.json` to resolve task entities to code locations.
-*   **Impact Analysis:** Use `knowledge_core/dependency_graph.json` to identify the "Task Context Set."
+**The Orchestrator's Critical Role in Planning:**
+During the `PLANNING` state, the Orchestrator's most important job is to validate the agent-generated `plan.txt`. It does this by calling the FDC Toolchain's `lint` command. **A plan that fails this check will halt the entire process, preventing the agent from entering an invalid state.**
 
-**Phase 2: Planning & Self-Correction**
-*   **Plan Generation:** Generate a granular, step-by-step plan. Use `for_each_file` for iterative tasks.
-*   **Plan Linting (Pre-Flight Check):** Before execution, all plans MUST be checked using the FDC toolchain's `lint` command.
-    *   **Command:** `python tooling/fdc_cli.py lint <plan_file.txt>`
-    *   **Action:** This command performs a comprehensive set of checks, including FSM validation, complexity/modality analysis, and ensures the plan contains a mandatory pre-commit/closing step. A plan must pass this check before execution.
-*   **Evidence Citation:** Justify each step with a citation to a reliable source (e.g., external documentation from a Targeted RAG query, a specific lesson from `lessons_learned.md`).
-*   **Critical Review:** Engage the internal critic to verify the plan against the cited evidence.
+### Layer 2: The FDC Toolchain (`fdc_cli.py` & `fdc_fsm.json`)
 
-**Phase 3: Execution & Structured Logging**
-*   **Execute Plan:** Execute the validated plan step-by-step.
-*   **Structured Logging:** Record every action to `logs/activity.log.jsonl` according to the `LOGGING_SCHEMA.md`.
+The FDC Toolchain is a set of utilities that the agent uses to structure its work and that the Orchestrator uses for validation. The toolchain is governed by its own FSM (`tooling/fdc_fsm.json`), which defines the legal sequence of commands *within a plan*.
 
-**Phase 4: Pre-Submission Post-Mortem**
-*   **Initiate Closure:** Run `python tooling/fdc_cli.py close --task-id "..."` to generate the post-mortem report in `postmortems/`.
-*   **Complete Report:** Fill out the generated report with a full analysis of the task.
-*   **Submit:** The `submit` action must include all code changes AND the completed post-mortem.
+#### **FDC Commands for Agent Use:**
+
+**`start` - Task Initiation**
+*   **Usage:** The first command the agent MUST issue upon receiving a task.
+*   **Command:** `run_in_bash_session python3 tooling/fdc_cli.py start --task-id "your-task-id"`
+*   **Function:** Logs the `TASK_START` event, formally beginning the development cycle.
+
+**`lint` - Pre-Flight Plan Validation**
+*   **Usage:** A command the agent can use to self-correct its own plan before finalizing it. The Orchestrator will *always* run this command on `plan.txt` as a mandatory check.
+*   **Command:** `run_in_bash_session python3 tooling/fdc_cli.py lint <plan_file.txt>`
+*   **Function:** Performs a comprehensive check against the low-level FSM:
+    1.  **Closure Mandate:** Ensures the plan's final action is a call to the `close` command.
+    2.  **FSM Validation:** Validates the sequence of agent tools against `tooling/fdc_fsm.json`.
+    3.  **Semantic Validation:** Checks for errors like using a file before creating it.
+
+**`close` - Task Closure**
+*   **Usage:** The **last command** in any valid plan.
+*   **Command:** `run_in_bash_session python3 tooling/fdc_cli.py close --task-id "your-task-id"`
+*   **Function:** Logs `TASK_END`, generates a post-mortem template, and signals to the Orchestrator that plan execution is complete.
 
 ---
 ### STANDING ORDERS
 
-*   **AORP MANDATE:** All Finite Development Cycles (FDCs) MUST be initiated using the FDC toolchain's `start` command. This is non-negotiable.
-    *   **Command:** `python tooling/fdc_cli.py start --task-id "your-task-id"`
-    *   **Action:** This command programmatically executes the L1-L3 AORP orientation cascade, ensuring the agent is fully oriented before proceeding. It logs a formal `TASK_START` event upon successful completion.
-*   **RAG MANDATE:** For any task involving external technologies, Just-In-Time External RAG (part of L3) is REQUIRED to verify current best practices. Do not trust internal knowledge.
-*   **FDC TOOLCHAIN MANDATE:** Use the `fdc_cli.py` tool for all core FDC state transitions: task initiation (`start`), plan linting (`lint`), and task closure (`close`). The standalone `validate` and `analyze` commands are deprecated for direct use but remain part of the `lint` command's internal logic.
+1.  **Orchestrator is Sovereign:** The agent's lifecycle is governed by `master_control.py`. The agent's primary job is to provide a valid `plan.txt` when the Orchestrator enters the `PLANNING` state.
+2.  **Toolchain is Law:** All plans must be valid according to the `fdc_cli.py lint` command. A valid plan is one that passes the Closure Mandate and is a valid string in the language defined by `fdc_fsm.json`.
+3.  **Hierarchy is Structure:** The Orchestrator (`master_control.py`) validates the agent's plan using the FDC Toolchain (`fdc_cli.py`). This separation ensures a robust, verifiable, and decidable development process, preventing the system from executing paradoxical or non-terminating plans.

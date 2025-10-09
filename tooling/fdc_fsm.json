@@ -1,12 +1,14 @@
 {
   "states": [
     "IDLE",
+    "ORIENTING",
     "PLANNING",
     "EXECUTING",
-    "POST_MORTEM",
+    "REVIEW",
     "DONE"
   ],
   "alphabet": [
+    "start_op",
     "plan_op",
     "step_op",
     "submit_op",
@@ -15,14 +17,20 @@
     "delete_op",
     "move_op",
     "tool_exec",
-    "close_op"
+    "close_op",
+    "loop_op"
   ],
   "transitions": {
     "IDLE": {
+      "start_op": "ORIENTING"
+    },
+    "ORIENTING": {
       "plan_op": "PLANNING"
     },
     "PLANNING": {
-      "step_op": "EXECUTING"
+      "step_op": "EXECUTING",
+      "read_op": "PLANNING",
+      "tool_exec": "PLANNING"
     },
     "EXECUTING": {
       "step_op": "EXECUTING",
@@ -31,9 +39,10 @@
       "delete_op": "EXECUTING",
       "move_op": "EXECUTING",
       "tool_exec": "EXECUTING",
-      "close_op": "POST_MORTEM"
+      "loop_op": "EXECUTING",
+      "close_op": "REVIEW"
     },
-    "POST_MORTEM": {
+    "REVIEW": {
       "submit_op": "DONE"
     }
   },
