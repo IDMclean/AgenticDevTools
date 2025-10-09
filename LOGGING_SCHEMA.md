@@ -1,6 +1,12 @@
-# Structured Activity Log Schema v1.1
+# Structured Activity Log Schema v2.0
 
-This document defines the JSON schema for entries in `logs/activity.log.jsonl`. Each line in the log file is a JSON object that must conform to this schema. The goal of this schema is to provide a rich, structured dataset for post-mortem analysis and to power the proactive task generation in Phase 7.
+This document defines the JSON schema for entries in `logs/activity.log.jsonl`. Each line in the log file is a complete JSON object that must conform to this schema. The goal of this schema is to provide a rich, structured dataset for post-mortem analysis, automated learning, and agent introspection.
+
+## Core Principles
+
+-   **Machine-Readable:** The log is designed primarily for automated analysis.
+-   **Introspective:** The schema captures not just the *action* taken, but the agent's *reasoning* behind it.
+-   **Traceable:** Every action is linked to a specific task and a step in the agent's plan.
 
 ## Schema Definition
 
@@ -8,112 +14,96 @@ This document defines the JSON schema for entries in `logs/activity.log.jsonl`. 
 {
   "type": "object",
   "properties": {
-    "log_id": {
-      "type": "string",
-      "format": "uuid",
-      "description": "A unique identifier for this specific log entry."
-    },
-    "session_id": {
-      "type": "string",
-      "description": "A unique identifier for the entire work session. Allows grouping of all logs for a single session."
-    },
-    "timestamp": {
+    "timestamp_iso8601": {
       "type": "string",
       "format": "date-time",
-      "description": "The ISO 8601 timestamp of the event."
+      "description": "An unambiguous ISO 8601 timestamp for when the event occurred."
     },
-    "phase": {
+    "agent_id": {
       "type": "string",
-      "enum": ["Phase 0", "Phase 1", "Phase 2", "Phase 3", "Phase 4", "Phase 5", "Phase 6", "Phase 7", "Phase 8"],
-      "description": "The protocol phase in which the action occurred."
+      "description": "A unique identifier for the specific Jules instance or session performing the task."
     },
-    "task": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "A unique identifier for the current task."
-        },
-        "plan_step": {
-          "type": "integer",
-          "description": "The specific step number in the plan that this action corresponds to."
-        }
-      },
-      "required": ["id", "plan_step"]
-    },
-    "action": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "TASK_START",
-            "FILE_READ",
-            "FILE_WRITE",
-            "TOOL_EXEC",
-            "EXTERNAL_RAG_QUERY",
-            "PLAN_UPDATE",
-            "CRITIC_FEEDBACK",
-            "POST_MORTEM",
-            "TASK_END",
-            "INFO",
-            "SYSTEM_FAILURE",
-            "AGENT_TOOL_CALL"
-          ],
-          "description": "The type of action being logged."
-        },
-        "details": {
-          "type": "object",
-          "description": "A flexible object containing details specific to the action type. See 'Action Details Examples' for best practices."
-        }
-      },
-      "required": ["type", "details"]
-    },
-    "outcome": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "type": "string",
-          "enum": ["SUCCESS", "FAILURE", "IN_PROGRESS"],
-          "description": "The outcome of the action."
-        },
-        "message": {
-          "type": "string",
-          "description": "A human-readable message describing the outcome."
-        },
-        "error": {
-            "type": "object",
-            "properties": {
-                "message": {"type": "string"},
-                "stack_trace": {"type": "string"}
-            },
-            "description": "Structured error information, present only on FAILURE."
-        }
-      },
-      "required": ["status"]
-    },
-    "evidence_citation": {
+    "task_id": {
       "type": "string",
-      "description": "A citation to the source (e.g., external documentation, internal artifact) that justifies the action, as per protocol."
+      "description": "A unique identifier for the overall task assigned by the user."
+    },
+    "plan_step_id": {
+      "type": "integer",
+      "description": "The specific step number from the agent's generated plan that this action corresponds to."
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "FILE_READ",
+        "FILE_WRITE",
+        "TOOL_EXEC",
+        "INTERNAL_RAG_QUERY",
+        "EXTERNAL_RAG_QUERY",
+        "PLAN_GENERATION",
+        "CRITICAL_REVIEW",
+        "POST_MORTEM_ANALYSIS"
+      ],
+      "description": "A standardized enum representing the type of action taken."
+    },
+    "action_params": {
+      "type": "object",
+      "description": "A JSON object containing the parameters for the action (e.g., file path, search query)."
+    },
+    "llm_reasoning": {
+      "type": "string",
+      "description": "The LLM's brief, self-generated rationale for taking this specific action at this point in the plan."
+    },
+    "critic_feedback": {
+      "type": "string",
+      "description": "If the action was preceded by a critical review, this field contains the output from the critic model."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["SUCCESS", "FAILURE", "RETRY"],
+      "description": "The outcome of the action."
+    },
+    "output_summary": {
+        "type": "string",
+        "description": "A brief, machine-generated summary of the action's result (e.g., hash of file contents, exit code of a tool, summary of search results)."
     }
   },
-  "required": ["log_id", "session_id", "timestamp", "phase", "task", "action", "outcome"]
+  "required": [
+    "timestamp_iso8601",
+    "agent_id",
+    "task_id",
+    "plan_step_id",
+    "action_type",
+    "action_params",
+    "status"
+    ]
 }
 ```
 
-## Action Details Examples
+## Action Parameter Examples (`action_params`)
 
-- **TASK_START**: `{"origin": "user" | "proactive", "description": "High-level task description.", "justification": "Analysis that led to this proactive task."}`
-- **FILE_WRITE**: `{"path": "/path/to/file.md", "content_hash": "sha256_hash_of_content"}`
-- **TOOL_EXEC**: `{"command": "ls -l", "stdout": "...", "stderr": "..."}`
-- **EXTERNAL_RAG_QUERY**: `{"query": "React best practices 2025", "results_summary": "Top 3 results summarized..."}`
-- **POST_MORTEM**: `{"summary": "What worked, what failed, root cause analysis."}`
-- **TASK_END**: `{"summary": "Signals the formal end of the development phase of a Finite Development Cycle, post-mortem complete."}`
-- **INFO**: `{"summary": "An informational message or observation."}`
-- **SYSTEM_FAILURE**: `{"error_message": "...", "stack_trace": "..."}`
+-   **FILE_READ**: `{"file_path": "/path/to/file.js"}`
+-   **FILE_WRITE**: `{"file_path": "/path/to/file.md", "content_hash": "sha256_hash_of_content"}`
+-   **TOOL_EXEC**: `{"command": "ctags -R .", "working_directory": "/app"}`
+-   **INTERNAL_RAG_QUERY**: `{"artifact": "symbols.json", "query": "find_function: 'getUser'"}`
+-   **EXTERNAL_RAG_QUERY**: `{"query": "React 'use' hook documentation"}`
+-   **PLAN_GENERATION**: `{"plan": "1. Step one...\n2. Step two..."}`
+-   **CRITICAL_REVIEW**: `{"plan_step_id": 3, "critique": "The justification for this step is weak. It relies on an outdated blog post."}`
 
 ## Example Entry
 
 ```json
-{"log_id":"...","session_id":"...","timestamp":"2025-10-05T18:00:00Z","phase":"Phase 2","task":{"id":"improve-logging-01","plan_step":3},"action":{"type":"FILE_WRITE","details":{"path":"LOGGING_SCHEMA.md","content_hash":"..."}},"outcome":{"status":"SUCCESS","message":"Updated logging schema to v1.1."},"evidence_citation":"AGENTS.md, Phase 7 analysis"}
+{
+  "timestamp_iso8601": "2025-10-09T10:00:00Z",
+  "agent_id": "jules-session-b7cde",
+  "task_id": "update-auth-flow-01",
+  "plan_step_id": 4,
+  "action_type": "EXTERNAL_RAG_QUERY",
+  "action_params": {
+    "query": "react router v6 protected routes best practices"
+  },
+  "llm_reasoning": "The current implementation seems to be using an older pattern. I need to verify the current best practice for protected routes in React Router v6 before attempting a refactor.",
+  "critic_feedback": null,
+  "status": "SUCCESS",
+  "output_summary": "Retrieved 3 links from official documentation and 2 high-ranking blog posts detailing the use of <Outlet> and a wrapper component."
+}
 ```
