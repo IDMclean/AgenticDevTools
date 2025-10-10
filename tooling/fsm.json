@@ -6,7 +6,6 @@
     "RESEARCHING",
     "EXECUTING",
     "AWAITING_ANALYSIS",
-    "POST_MORTEM",
     "SELF_CORRECTING",
     "AWAITING_SUBMISSION",
     "ERROR"
@@ -32,12 +31,12 @@
     {
       "source": "PLANNING",
       "dest": "EXECUTING",
-      "trigger": "plan_is_set"
+      "trigger": "plan_valid"
     },
     {
-      "source": "PLANNING",
-      "dest": "ERROR",
-      "trigger": "planning_failed"
+        "source": "PLANNING",
+        "dest": "ERROR",
+        "trigger": "plan_invalid"
     },
     {
       "source": "PLANNING",
@@ -57,27 +56,17 @@
     {
       "source": "EXECUTING",
       "dest": "EXECUTING",
-      "trigger": "step_succeeded"
-    },
-    {
-      "source": "EXECUTING",
-      "dest": "EXECUTING",
-      "trigger": "step_not_complete"
+      "trigger": "step_executed"
     },
     {
       "source": "EXECUTING",
       "dest": "AWAITING_ANALYSIS",
-      "trigger": "all_steps_completed"
+      "trigger": "execution_complete"
     },
     {
       "source": "AWAITING_ANALYSIS",
-      "dest": "POST_MORTEM",
-      "trigger": "analysis_complete"
-    },
-    {
-       "source": "AWAITING_ANALYSIS",
-       "dest": "AWAITING_ANALYSIS",
-       "trigger": "analysis_not_complete"
+      "dest": "SELF_CORRECTING",
+      "trigger": "post_mortem_complete"
     },
     {
       "source": "AWAITING_ANALYSIS",
@@ -90,19 +79,9 @@
       "trigger": "execution_failed"
     },
     {
-      "source": "POST_MORTEM",
-      "dest": "SELF_CORRECTING",
-      "trigger": "post_mortem_complete"
-    },
-    {
-      "source": "POST_MORTEM",
-      "dest": "ERROR",
-      "trigger": "post_mortem_failed"
-    },
-    {
       "source": "SELF_CORRECTING",
       "dest": "AWAITING_SUBMISSION",
-      "trigger": "self_correction_succeeded"
+      "trigger": "self_correction_complete"
     },
     {
       "source": "SELF_CORRECTING",
