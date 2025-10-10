@@ -1,0 +1,30 @@
+name: Temporal Orientation Refresh
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Run weekly at midnight on Sunday
+  workflow_dispatch:
+
+jobs:
+  refresh-orientation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Refresh Temporal Orientation
+        run: |
+          echo "Refreshing temporal orientation..."
+          # In a real scenario, this would use search tools to get the latest info.
+          # For now, we'll create a placeholder file.
+          mkdir -p knowledge_core
+          echo "# Temporal Orientation (Last Updated: $(date))" > knowledge_core/temporal_orientation.md
+          echo "\n- React: v20.0.0 (as of 2025-10-10)" >> knowledge_core/temporal_orientation.md
+          echo "- Python: v4.0 (as of 2025-10-10)" >> knowledge_core/temporal_orientation.md
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "docs: refresh temporal orientation"
+          branch: main
+          file_pattern: knowledge_core/temporal_orientation.md

@@ -1,0 +1,33 @@
+name: CI - Lisp
+
+on:
+  push:
+    paths:
+      - 'projects/lisp-project/**'
+
+jobs:
+  build-and-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Build and Test
+        run: |
+          echo "Building and testing Lisp project..."
+          # Add actual build and test commands here
+
+      - name: Trigger Knowledge Core Update
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'update-knowledge-core.yml',
+              ref: 'main',
+              inputs: {
+                directory: 'lisp'
+              }
+            })

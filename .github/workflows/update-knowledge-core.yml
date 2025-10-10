@@ -1,42 +1,36 @@
 name: Update Knowledge Core
 
 on:
-  push:
-    branches: [ "main" ]
   workflow_dispatch:
-
-permissions:
-  contents: write
+    inputs:
+      directory:
+        description: 'The directory that was modified'
+        required: true
 
 jobs:
   update-knowledge:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v2
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: '3.x'
 
-      - name: Install Dependencies
-        run: pip install jsonschema
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-      - name: Run Dependency Graph Generator
+      - name: Generate Dependency Graph
         run: python tooling/dependency_graph_generator.py
 
-      - name: Run Symbol Map Generator
+      - name: Generate Symbol Map
         run: python tooling/symbol_map_generator.py
 
       - name: Commit and push changes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "chore(knowledge): Automatically update Knowledge Core artifacts"
-          commit_options: '--no-verify'
-          file_pattern: 'knowledge_core/dependency_graph.json knowledge_core/symbols.json'
-          repository: .
-          commit_user_name: Jules Agent
-          commit_user_email: jules.agent@example.com
-          commit_author: Jules Agent <jules.agent@example.com>
+          commit_message: "docs: update knowledge core"
+          branch: main
+          file_pattern: knowledge_core/dependency_graph.json knowledge_core/symbols.json
