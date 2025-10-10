@@ -43,8 +43,20 @@ def parse_plan(plan_content: str) -> List[Command]:
         if not non_comment_lines:
             continue
 
-        tool_name = non_comment_lines[0].strip()
-        args_text = "\n".join(non_comment_lines[1:]).strip()
+        first_line = non_comment_lines[0].strip()
+        # Handle numbered plan steps
+        if "." in first_line:
+            parts = first_line.split(".", 1)[1].strip().split(None, 1)
+            tool_name = parts[0].rstrip(":")
+            args_text = parts[1] if len(parts) > 1 else ""
+        else:
+            parts = first_line.split(None, 1)
+            tool_name = parts[0].rstrip(":")
+            args_text = parts[1] if len(parts) > 1 else ""
+
+        # Append any additional lines as part of the args_text
+        if len(non_comment_lines) > 1:
+            args_text += "\n" + "\n".join(non_comment_lines[1:]).strip()
 
         commands.append(Command(tool_name=tool_name, args_text=args_text))
 
