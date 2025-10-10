@@ -176,19 +176,25 @@ class TestMasterControlRedesigned(unittest.TestCase):
             self.graph.current_state = "AWAITING_ANALYSIS"
 
         # 4. AWAITING_ANALYSIS
-        with patch("master_control.os.path.exists", return_value=True):
+        with patch(
+            "tooling.master_control.os.path.exists", return_value=True
+        ):
             with open("analysis_complete.txt", "w") as f:
                 f.write("done")
             trigger = self.graph.do_awaiting_analysis(self.agent_state)
-        self.assertEqual(trigger, "analysis_complete")
+        self.assertEqual(
+            trigger, self.graph.get_trigger("AWAITING_ANALYSIS", "POST_MORTEM")
+        )
 
         # 5. POST_MORTEM
         trigger = self.graph.do_post_mortem(self.agent_state)
-        self.assertEqual(trigger, "post_mortem_complete")
+        self.assertEqual(trigger, self.graph.get_trigger("POST_MORTEM", "SELF_CORRECTING"))
 
         # 6. SELF_CORRECTING
         trigger = self.graph.do_self_correcting(self.agent_state)
-        self.assertEqual(trigger, "self_correction_succeeded")
+        self.assertEqual(
+            trigger, self.graph.get_trigger("SELF_CORRECTING", "AWAITING_SUBMISSION")
+        )
         self.graph.current_state = "AWAITING_SUBMISSION"
 
         # --- Assertions ---
@@ -212,19 +218,21 @@ class TestMasterControlRedesigned(unittest.TestCase):
         research_topic = "testing the L4 cycle"
 
         # 1. PLANNING -> RESEARCHING
-        with patch("master_control.os.path.exists") as mock_exists:
+        with patch(
+            "tooling.master_control.os.path.exists"
+        ) as mock_exists:
             mock_exists.side_effect = lambda path: path == "request_deep_research.txt"
             with open("request_deep_research.txt", "w") as f:
                 f.write(research_topic)
             trigger = self.graph.do_planning(self.agent_state)
 
-        self.assertEqual(trigger, "research_requested")
+        self.assertEqual(trigger, self.graph.get_trigger("PLANNING", "RESEARCHING"))
         self.assertEqual(self.agent_state.research_findings["topic"], research_topic)
         self.graph.current_state = "RESEARCHING"
 
         # 2. RESEARCHING -> EXECUTING
         trigger = self.graph.do_researching(self.agent_state)
-        self.assertEqual(trigger, "research_plan_validated")
+        self.assertEqual(trigger, self.graph.get_trigger("RESEARCHING", "EXECUTING"))
         self.assertEqual(len(self.agent_state.plan_stack), 1)
         self.assertEqual(self.agent_state.plan_stack[0].plan_path, "research_plan.txt")
         self.assertTrue(os.path.exists("research_plan.txt"))
@@ -232,29 +240,33 @@ class TestMasterControlRedesigned(unittest.TestCase):
 
         # 3. EXECUTING (the research plan)
         # The generated research plan has 4 steps
-        with patch("master_control.os.path.exists") as mock_exists:
+        with patch(
+            "tooling.master_control.os.path.exists"
+        ) as mock_exists:
             mock_exists.side_effect = lambda path: path in [
                 "research_plan.txt",
                 "step_complete.txt",
             ]
+            exec_trigger = self.graph.get_trigger("EXECUTING", "EXECUTING")
+            final_trigger = self.graph.get_trigger("EXECUTING", "AWAITING_ANALYSIS")
             for _ in range(4):
                 with open("step_complete.txt", "w") as f:
                     f.write("done")
                 trigger = self.graph.do_execution(self.agent_state)
-                self.assertEqual(trigger, "step_succeeded")
+                self.assertEqual(trigger, exec_trigger)
                 self.graph.current_state = "EXECUTING"
 
             # After the loop, the plan is finished. The next call to do_execution
             # will find the current context is done, pop it, and return a trigger to re-enter.
             trigger = self.graph.do_execution(self.agent_state)
-            self.assertEqual(trigger, "step_succeeded")  # This pops the finished plan
+            self.assertEqual(trigger, exec_trigger)  # This pops the finished plan
             self.assertTrue(
                 not self.agent_state.plan_stack
             )  # The plan stack should now be empty
 
             # The final call to do_execution finds the stack empty and transitions out.
             trigger = self.graph.do_execution(self.agent_state)
-            self.assertEqual(trigger, "all_steps_completed")
+            self.assertEqual(trigger, final_trigger)
 
     def test_reset_all_unauthorized(self):
         """
