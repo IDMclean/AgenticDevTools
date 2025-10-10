@@ -1,0 +1,25 @@
+name: "Validate AGENTS.md"
+
+on:
+  pull_request:
+    paths:
+      - 'agents.md.d/**'
+      - 'AGENTS.md'
+      - 'Makefile'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v3
+
+      - name: "Generate AGENTS.md"
+        run: make AGENTS.md
+
+      - name: "Check for unstaged changes"
+        run: |
+          if ! git diff --exit-code AGENTS.md; then
+            echo "::error::The AGENTS.md file is not up-to-date. Please run 'make AGENTS.md' locally and commit the changes."
+            exit 1
+          fi

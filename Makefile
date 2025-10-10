@@ -40,20 +40,19 @@ SCHEMA_FILE = protocols/protocol.schema.json
 COMPILER_SCRIPT = tooling/protocol_compiler.py
 
 # --- AGENTS.md ---
-AGENT_PROTOCOLS_JSON = $(wildcard protocols/*.protocol.json)
-AGENT_PROTOCOLS_MD = $(wildcard protocols/*.protocol.md)
-AGENT_PROTOCOLS_AUTODOC = $(wildcard protocols/*.autodoc.md)
+# AGENTS.md is generated from snippets in the agents.md.d directory.
+# This approach is chosen to minimize merge conflicts on a central file.
+AGENT_SNIPPETS = $(wildcard agents.md.d/*.md)
 
-# The AGENTS.md file is a target that depends on all its source files.
-AGENTS.md: $(AGENT_PROTOCOLS_JSON) $(AGENT_PROTOCOLS_MD) $(AGENT_PROTOCOLS_AUTODOC) $(SCHEMA_FILE) $(COMPILER_SCRIPT) knowledge_core/SYSTEM_DOCUMENTATION.md
-	@echo "--> Compiling agent protocols into AGENTS.md and Knowledge Graph..."
-	@python3 $(COMPILER_SCRIPT) \
-		--source-dir protocols \
-		--output-file AGENTS.md \
-		--schema-file $(SCHEMA_FILE) \
-		--knowledge-graph-file
+# The AGENTS.md file is a target that depends on all its source snippet files.
+AGENTS.md: $(AGENT_SNIPPETS)
+	@echo "--> Generating AGENTS.md from snippets in agents.md.d/..."
+	@# Sort the files to ensure a deterministic order before concatenating
+	@find agents.md.d -name "*.md" | sort | xargs cat > AGENTS.md
+	@echo "AGENTS.md generated successfully."
 
 # A phony target to easily trigger the main protocol compilation.
+# This now points to the new AGENTS.md target.
 compile-protocols: AGENTS.md
 
 # --- SECURITY.md ---
