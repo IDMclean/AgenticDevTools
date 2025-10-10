@@ -1,8 +1,6 @@
 # Protocol Audit Report
 ## 1. `AGENTS.md` Source Check
-- ⚠️ **Warning:** AGENTS.md may be out of date.
-  - Latest source file modified: `/app/protocols/protocol.schema.json`.
-  - **Recommendation:** Run `make AGENTS.md` to re-compile.
+- ✅ **Success:** AGENTS.md appears to be up-to-date.
 
 ## 2. Protocol Completeness
 ### Tools Used But Not In Protocol
@@ -22,12 +20,15 @@
   - `restore_file`
   - `tooling.research.execute_research_protocol`
   - `tooling.research_planner.plan_deep_research`
+  - `tooling/code_suggester.py`
   - `tooling/environmental_probe.py`
   - `tooling/fdc_cli.py`
   - `tooling/fdc_fsm.json`
   - `tooling/knowledge_compiler.py`
   - `tooling/master_control.py`
   - `tooling/protocol_updater.py`
+  - `tooling/research.py`
+  - `tooling/research_planner.py`
   - `tooling/self_correction_orchestrator.py`
   - `view_text_website`
 

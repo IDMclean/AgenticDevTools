@@ -89,7 +89,7 @@ readme:
 # ==============================================================================
 # Auditing
 # ==============================================================================
-audit:
+audit: AGENTS.md
 	@echo "--> Running protocol auditor..."
 	@python3 tooling/protocol_auditor.py
 
@@ -98,6 +98,9 @@ audit:
 # ==============================================================================
 # A general build target that compiles all protocols and generates documentation.
 build: docs readme compile-protocols compile-security-protocols enrich-kg
+
+# A comprehensive validation target that runs all checks.
+validate: build lint test audit
 
 clean:
 	@echo "--> Removing compiled protocol and documentation artifacts..."

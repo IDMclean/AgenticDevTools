@@ -6,6 +6,7 @@ which are central to the agent's ability to understand and execute plans.
 The parser correctly handles multi-line arguments and ignores comments,
 allowing for robust and readable plan files.
 """
+
 import re
 from dataclasses import dataclass
 from typing import List
@@ -31,7 +32,7 @@ def parse_plan(plan_content: str) -> List[Command]:
     """
     commands = []
     # Split the plan by blank lines to separate command blocks.
-    command_blocks = re.split(r'\n\s*\n', plan_content.strip())
+    command_blocks = re.split(r"\n\s*\n", plan_content.strip())
 
     for block in command_blocks:
         if not block.strip():
@@ -39,7 +40,9 @@ def parse_plan(plan_content: str) -> List[Command]:
 
         # Filter out comment lines (those starting with '#')
         lines = [
-            line for line in block.strip().split('\n') if not line.strip().startswith('#')
+            line
+            for line in block.strip().split("\n")
+            if not line.strip().startswith("#")
         ]
 
         if not lines:
@@ -55,7 +58,7 @@ def parse_plan(plan_content: str) -> List[Command]:
             args_lines.append(first_line_parts[1])
         args_lines.extend(lines[1:])
 
-        args_text = '\n'.join(args_lines).strip()
+        args_text = "\n".join(args_lines).strip()
 
         commands.append(Command(tool_name=tool_name, args_text=args_text))
 

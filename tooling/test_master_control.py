@@ -18,20 +18,20 @@ The key principles of this new design are:
   necessary dependencies from the repository are copied into it, ensuring tests
   do not have side effects and do not rely on the external state of the repo.
 """
+
 import unittest
-import sys
 import os
-import datetime
 import json
 import subprocess
 import tempfile
 import shutil
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 # Use absolute imports
 from tooling.master_control import MasterControlGraph
 from tooling.state import AgentState, PlanContext
-from tooling.plan_parser import parse_plan, Command
+from tooling.plan_parser import parse_plan
+
 
 class TestMasterControlRedesigned(unittest.TestCase):
     """
@@ -50,9 +50,16 @@ class TestMasterControlRedesigned(unittest.TestCase):
         os.makedirs("protocols", exist_ok=True)
 
         # Copy essential dependencies into the temp directory
-        shutil.copyfile(os.path.join(self.original_cwd, "postmortem.md"), "postmortem.md")
-        shutil.copyfile(os.path.join(self.original_cwd, "tooling", "state.py"), "tooling/state.py")
-        shutil.copyfile(os.path.join(self.original_cwd, "tooling", "fdc_cli.py"), "tooling/fdc_cli.py")
+        shutil.copyfile(
+            os.path.join(self.original_cwd, "postmortem.md"), "postmortem.md"
+        )
+        shutil.copyfile(
+            os.path.join(self.original_cwd, "tooling", "state.py"), "tooling/state.py"
+        )
+        shutil.copyfile(
+            os.path.join(self.original_cwd, "tooling", "fdc_cli.py"),
+            "tooling/fdc_cli.py",
+        )
 
         self.fsm_path = os.path.join(self.original_cwd, "tooling", "fsm.json")
         self.task_id = "test-redesigned-workflow"
@@ -69,67 +76,109 @@ class TestMasterControlRedesigned(unittest.TestCase):
         self.agent_state = AgentState(task=self.task_id)
         self.graph = MasterControlGraph(fsm_path=self.fsm_path)
 
-
     def tearDown(self):
         os.chdir(self.original_cwd)
         shutil.rmtree(self.test_dir)
-
 
     @patch("master_control.subprocess.run")
     def test_full_workflow_single_threaded(self, mock_subprocess):
         """
         Tests the full, non-blocking FSM workflow deterministically.
         """
+
         # --- Mocking Setup ---
         def subprocess_side_effect(cmd, *args, **kwargs):
             cmd_str = " ".join(cmd)
             if "knowledge_compiler.py" in cmd_str:
-                lesson = {"lesson_id": "l1", "insight": "Test lesson", "action": {"type": "UPDATE_PROTOCOL", "command": "add-tool", "parameters": {"protocol_id": self.mock_protocol_id, "tool_name": "new_mock_tool"}}, "status": "pending"}
-                with open(self.lessons_file, "a") as f: f.write(json.dumps(lesson) + "\n")
+                lesson = {
+                    "lesson_id": "l1",
+                    "insight": "Test lesson",
+                    "action": {
+                        "type": "UPDATE_PROTOCOL",
+                        "command": "add-tool",
+                        "parameters": {
+                            "protocol_id": self.mock_protocol_id,
+                            "tool_name": "new_mock_tool",
+                        },
+                    },
+                    "status": "pending",
+                }
+                with open(self.lessons_file, "a") as f:
+                    f.write(json.dumps(lesson) + "\n")
             elif "self_correction_orchestrator.py" in cmd_str:
                 with open(self.mock_protocol_file, "r+") as f:
                     data = json.load(f)
                     data["associated_tools"].append("new_mock_tool")
-                    f.seek(0); json.dump(data, f); f.truncate()
+                    f.seek(0)
+                    json.dump(data, f)
+                    f.truncate()
             return subprocess.CompletedProcess(args=cmd, returncode=0)
+
         mock_subprocess.side_effect = subprocess_side_effect
 
         # --- Test Execution ---
         # 1. ORIENTING
-        with patch("master_control.execute_research_protocol", return_value="Mocked Research Data"):
+        with patch(
+            "tooling.master_control.execute_research_protocol",
+            return_value="Mocked Research Data",
+        ):
             trigger = self.graph.do_orientation(self.agent_state)
-        self.assertEqual(trigger, "orientation_succeeded")
+        self.assertEqual(trigger, self.graph.get_trigger("ORIENTING", "PLANNING"))
 
         # 2. PLANNING (Standard Workflow)
         plan_content = 'set_plan "Test Plan"\nplan_step_complete "Done"'
-        with open("plan.txt", "w") as f: f.write(plan_content)
+        with open("plan.txt", "w") as f:
+            f.write(plan_content)
 
-        with patch("master_control.os.path.exists") as mock_exists:
-            mock_exists.side_effect = lambda path: path == "plan.txt"
+        def planning_mock_exists(path):
+            # For this test, we only want to find the main plan file.
+            return path == "plan.txt"
+
+        with patch(
+            "tooling.master_control.os.path.exists", side_effect=planning_mock_exists
+        ):
             trigger = self.graph.do_planning(self.agent_state)
-
-        self.assertEqual(trigger, "plan_is_set")
+        self.assertEqual(trigger, self.graph.get_trigger("PLANNING", "EXECUTING"))
 
         # 3. EXECUTING
-        with patch("master_control.os.path.exists") as mock_exists:
-            mock_exists.side_effect = lambda path: path in ['plan.txt', 'step_complete.txt']
-            for _ in range(2):
-                with open("step_complete.txt", "w") as f: f.write("done")
+        self.graph.current_state = "EXECUTING"
+        plan_length = len(self.agent_state.plan_stack[0].commands)
+        exec_trigger = self.graph.get_trigger("EXECUTING", "EXECUTING")
+        final_trigger = self.graph.get_trigger("EXECUTING", "AWAITING_ANALYSIS")
+
+        def execution_mock_exists(path):
+            # This mock must be specific. For this test, only the plan file and
+            # the step completion signal should ever "exist".
+            return path in ["plan.txt", "step_complete.txt"]
+
+        with patch(
+            "tooling.master_control.os.path.exists", side_effect=execution_mock_exists
+        ):
+            # Execute all steps in the plan
+            for i in range(plan_length):
+                with open("step_complete.txt", "w") as f:
+                    f.write("done")
                 trigger = self.graph.do_execution(self.agent_state)
-                self.assertEqual(trigger, "step_succeeded")
+                self.assertEqual(trigger, exec_trigger, f"Failed on step {i+1}")
                 self.graph.current_state = "EXECUTING"
 
+            # The next call should pop the finished plan and return the execution trigger
             trigger = self.graph.do_execution(self.agent_state)
-            self.assertEqual(trigger, "step_succeeded")
-            self.assertTrue(not self.agent_state.plan_stack)
+            self.assertEqual(trigger, exec_trigger)
+            self.assertTrue(
+                not self.agent_state.plan_stack,
+                "Plan stack should be empty after finishing.",
+            )
 
+            # The final call should see the empty stack and transition out
             trigger = self.graph.do_execution(self.agent_state)
-            self.assertEqual(trigger, "all_steps_completed")
+            self.assertEqual(trigger, final_trigger)
             self.graph.current_state = "AWAITING_ANALYSIS"
 
         # 4. AWAITING_ANALYSIS
         with patch("master_control.os.path.exists", return_value=True):
-            with open("analysis_complete.txt", "w") as f: f.write("done")
+            with open("analysis_complete.txt", "w") as f:
+                f.write("done")
             trigger = self.graph.do_awaiting_analysis(self.agent_state)
         self.assertEqual(trigger, "analysis_complete")
 
@@ -143,7 +192,10 @@ class TestMasterControlRedesigned(unittest.TestCase):
         self.graph.current_state = "AWAITING_SUBMISSION"
 
         # --- Assertions ---
-        self.assertIsNone(self.agent_state.error, f"Agent entered an error state: {self.agent_state.error}")
+        self.assertIsNone(
+            self.agent_state.error,
+            f"Agent entered an error state: {self.agent_state.error}",
+        )
         with open(self.mock_protocol_file, "r") as f:
             updated_protocol = json.load(f)
         self.assertIn("new_mock_tool", updated_protocol["associated_tools"])
@@ -153,7 +205,9 @@ class TestMasterControlRedesigned(unittest.TestCase):
         """
         Tests the L4 Deep Research Cycle is correctly triggered and executed.
         """
-        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
+        mock_subprocess.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0
+        )
         self.graph.current_state = "PLANNING"
         research_topic = "testing the L4 cycle"
 
@@ -179,9 +233,13 @@ class TestMasterControlRedesigned(unittest.TestCase):
         # 3. EXECUTING (the research plan)
         # The generated research plan has 4 steps
         with patch("master_control.os.path.exists") as mock_exists:
-            mock_exists.side_effect = lambda path: path in ['research_plan.txt', 'step_complete.txt']
+            mock_exists.side_effect = lambda path: path in [
+                "research_plan.txt",
+                "step_complete.txt",
+            ]
             for _ in range(4):
-                with open("step_complete.txt", "w") as f: f.write("done")
+                with open("step_complete.txt", "w") as f:
+                    f.write("done")
                 trigger = self.graph.do_execution(self.agent_state)
                 self.assertEqual(trigger, "step_succeeded")
                 self.graph.current_state = "EXECUTING"
@@ -189,8 +247,10 @@ class TestMasterControlRedesigned(unittest.TestCase):
             # After the loop, the plan is finished. The next call to do_execution
             # will find the current context is done, pop it, and return a trigger to re-enter.
             trigger = self.graph.do_execution(self.agent_state)
-            self.assertEqual(trigger, "step_succeeded") # This pops the finished plan
-            self.assertTrue(not self.agent_state.plan_stack) # The plan stack should now be empty
+            self.assertEqual(trigger, "step_succeeded")  # This pops the finished plan
+            self.assertTrue(
+                not self.agent_state.plan_stack
+            )  # The plan stack should now be empty
 
             # The final call to do_execution finds the stack empty and transitions out.
             trigger = self.graph.do_execution(self.agent_state)
@@ -203,7 +263,8 @@ class TestMasterControlRedesigned(unittest.TestCase):
         """
         # Create a plan that contains the forbidden command
         plan_content = 'reset_all "Catastrophic Reset"'
-        with open("plan.txt", "w") as f: f.write(plan_content)
+        with open("plan.txt", "w") as f:
+            f.write(plan_content)
 
         # Load the plan into the agent state
         self.agent_state.plan_stack.append(
@@ -214,7 +275,11 @@ class TestMasterControlRedesigned(unittest.TestCase):
         trigger = self.graph.do_execution(self.agent_state)
 
         # Assert that the FSM entered the error state
-        self.assertEqual(trigger, "execution_failed", "The FSM did not fire the correct error trigger.")
+        self.assertEqual(
+            trigger,
+            "execution_failed",
+            "The FSM did not fire the correct error trigger.",
+        )
         self.assertIn("Unauthorized use of 'reset_all'", self.agent_state.error)
 
     def test_reset_all_authorized(self):
@@ -224,12 +289,14 @@ class TestMasterControlRedesigned(unittest.TestCase):
         """
         # Create the authorization token
         auth_token_path = "knowledge_core/reset_all_authorization.token"
-        with open(auth_token_path, "w") as f: f.write("authorized")
+        with open(auth_token_path, "w") as f:
+            f.write("authorized")
         self.assertTrue(os.path.exists(auth_token_path))
 
         # Create a plan with the 'reset_all' command
         plan_content = 'reset_all "Authorized Reset"'
-        with open("plan.txt", "w") as f: f.write(plan_content)
+        with open("plan.txt", "w") as f:
+            f.write(plan_content)
 
         # Load the plan into the agent state
         self.agent_state.plan_stack.append(
@@ -248,7 +315,9 @@ class TestMasterControlRedesigned(unittest.TestCase):
         self.assertIsNone(self.agent_state.error)
 
         # Assert that the one-time token was consumed
-        self.assertFalse(os.path.exists(auth_token_path), "The authorization token was not consumed.")
+        self.assertFalse(
+            os.path.exists(auth_token_path), "The authorization token was not consumed."
+        )
 
 
 if __name__ == "__main__":

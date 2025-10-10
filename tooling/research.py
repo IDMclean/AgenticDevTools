@@ -19,9 +19,13 @@ following native tools into the execution environment:
 - `google_search(query: str) -> str`
 - `view_text_website(url: str) -> str`
 """
-from typing import Dict, Any
 
-def execute_research_protocol(constraints: Dict[str, Any]) -> str:
+from typing import Dict, Any, Callable
+
+
+def execute_research_protocol(
+    constraints: Dict[str, Any], native_tools: Dict[str, Callable]
+) -> str:
     """
     Executes a research task based on a dictionary of constraints.
 
@@ -35,6 +39,7 @@ def execute_research_protocol(constraints: Dict[str, Any]) -> str:
             - path: The file or directory path for local filesystem operations.
             - query: The search term for web research.
             - url: The specific URL for direct web access.
+        native_tools: A dictionary of pre-loaded functions (e.g., 'read_file').
 
     Returns:
         A string containing the result of the research operation.
@@ -45,38 +50,45 @@ def execute_research_protocol(constraints: Dict[str, Any]) -> str:
     query = constraints.get("query")
     url = constraints.get("url")
 
-    # Level 1: Read a local file
+    # --- Tool Validation ---
+    # Define required tools for different research types
+    required_tool_map = {
+        ("local_filesystem", "file"): "read_file",
+        ("local_filesystem", "directory"): "list_files",
+        ("external_web", "narrow"): "google_search",
+        ("external_web", "broad"): "view_text_website",
+        ("external_repository", None): "view_text_website",
+    }
+    # Determine the required tool for the current operation
+    lookup_key = (target, None) if target == "external_repository" else (target, scope)
+    required_tool = required_tool_map.get(lookup_key)
+
+    if required_tool and required_tool not in native_tools:
+        return f"Error: The required tool '{required_tool}' was not provided."
+
+    # --- Protocol Execution ---
     if target == "local_filesystem" and scope == "file":
         if not path:
             return "Error: 'path' not specified for local file research."
-        # Assumes `read_file` is available in the execution environment
-        return read_file(filepath=path)
+        return native_tools["read_file"](filepath=path)
 
-    # Level 2: List a local directory
     elif target == "local_filesystem" and scope == "directory":
-        # Assumes `list_files` is available in the execution environment
-        return "\n".join(list_files(path=path or "."))
+        return "\n".join(native_tools["list_files"](path=path or "."))
 
-    # Level 3: Targeted web search
     elif target == "external_web" and scope == "narrow":
         if not query:
             return "Error: 'query' not specified for narrow web research."
-        # Assumes `google_search` is available in the execution environment
-        return google_search(query=query)
+        return native_tools["google_search"](query=query)
 
-    # Level 4: Broad web research (fetch content from a specific URL)
     elif target == "external_web" and scope == "broad":
         if not url:
             return "Error: 'url' not specified for broad web research."
-        # Assumes `view_text_website` is available in the execution environment
-        return view_text_website(url=url)
+        return native_tools["view_text_website"](url=url)
 
-    # Level 5: Fetch a file from a specific URL (e.g., from a Git repo)
     elif target == "external_repository":
         if not url:
             return "Error: 'url' not specified for external repository research."
-        # Assumes `view_text_website` is available in the execution environment
-        return view_text_website(url=url)
+        return native_tools["view_text_website"](url=url)
 
     else:
         return "Error: The provided constraints do not map to a recognized research protocol."
