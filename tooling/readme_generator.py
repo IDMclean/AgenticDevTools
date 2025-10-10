@@ -9,6 +9,7 @@ automatically reflects the current state of the documented source code.
 The script is designed to be run from the root of the repository and is
 integrated into the `Makefile` build process.
 """
+
 import ast
 import os
 
@@ -67,6 +68,7 @@ This project uses a `Makefile` to automate common development tasks.
 
 # --- Dynamic Content Generation ---
 
+
 def get_module_docstring(filepath: str) -> str:
     """
     Parses a Python file and extracts the module-level docstring.
@@ -101,7 +103,9 @@ def generate_key_components_section() -> str:
             # Format as a definition list for clarity
             parts.append(f"- **`{filepath}`**:")
             # Indent the docstring for better readability
-            indented_doc = "\\n".join([f"  > {line}" for line in docstring.splitlines()])
+            indented_doc = "\\n".join(
+                [f"  > {line}" for line in docstring.splitlines()]
+            )
             parts.append(indented_doc)
 
     if not parts:
@@ -109,7 +113,9 @@ def generate_key_components_section() -> str:
 
     return "\n\n".join(parts)
 
+
 # --- Main Execution Logic ---
+
 
 def main():
     """

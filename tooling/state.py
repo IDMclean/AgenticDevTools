@@ -15,7 +15,7 @@ snapshot-able representation of the agent's progress through a task.
 Together, these classes enable the hierarchical, stack-based planning and
 execution that is the hallmark of the CFDC.
 """
-import json
+
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 

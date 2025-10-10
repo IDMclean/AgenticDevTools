@@ -19,11 +19,11 @@ The CLI provides several key commands:
 - `lint`: A comprehensive "linter" that runs a full suite of checks on a plan
   file, including `validate`, `analyze`, and checks for disallowed recursion.
 """
+
 import argparse
 import datetime
 import json
 import os
-import shutil
 import sys
 import uuid
 
@@ -36,22 +36,6 @@ FSM_DEF_PATH = os.path.join(ROOT_DIR, "tooling", "fdc_fsm.json")
 MAX_RECURSION_DEPTH = 10  # Safety limit for hierarchical plans
 PLAN_REGISTRY_PATH = os.path.join(ROOT_DIR, "knowledge_core", "plan_registry.json")
 
-ACTION_TYPE_MAP = {
-    "set_plan": "plan_op",
-    "plan_step_complete": "step_op",
-    "submit": "submit_op",
-    "create_file_with_block": "write_op",
-    "overwrite_file_with_block": "write_op",
-    "replace_with_git_merge_diff": "write_op",
-    "read_file": "read_op",
-    "list_files": "read_op",
-    "grep": "read_op",
-    "delete_file": "delete_op",
-    "rename_file": "move_op",
-    "run_in_bash_session": "tool_exec",
-    "for_each_file": "loop_op",
-    # 'call_plan' is a meta-directive for the executor, not the FSM validator.
-}
 
 # --- CLI Subcommands & Helpers ---
 
@@ -122,7 +106,7 @@ def close_task(task_id):
     # of this tool is the signal for the MasterControlGraph to proceed.
 
 
-from tooling.plan_parser import parse_plan, Command
+from tooling.plan_parser import parse_plan
 
 # ... (other imports remain the same)
 
@@ -140,106 +124,46 @@ ACTION_TYPE_MAP = {
     "delete_file": "delete_op",
     "rename_file": "move_op",
     "run_in_bash_session": "tool_exec",
-    "call_plan": "call_plan_op", # Now a recognized action type
+    "call_plan": "call_plan_op",  # Now a recognized action type
 }
 
 
-def _validate_command(command: Command, state, fsm, fs):
-    """Validates a single Command object against the FSM and filesystem state."""
-    tool_name = command.tool_name
-    args_text = command.args_text
-
-    action_type = ACTION_TYPE_MAP.get(tool_name)
-    if not action_type:
-        print(f"Error: Unknown command '{tool_name}'.", file=sys.stderr)
-        sys.exit(1)
-
-    # Syntactic check
-    transitions = fsm["transitions"].get(state)
-    if action_type not in (transitions or {}):
-        print(
-            f"Error: Invalid FSM transition. Cannot perform '{action_type}' from state '{state}'.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    # Semantic check (simplified for this refactoring)
-    # A more robust validator would parse args_text for filenames
-    if "write_op" in action_type:
-        # Cannot robustly check for file existence without parsing args
-        pass
-
-    next_state = transitions[action_type]
-    print(
-        f"  OK: Action '{tool_name}' ({action_type}) transitions from {state} -> {next_state}"
-    )
-    return next_state, fs
-
-
 def _validate_plan_recursive(
-    lines,
-    start_index,
-    indent_level,
-    state,
-    fs,
-    placeholders,
-    fsm,
-    recursion_depth,
-):
+    commands: list, fsm: dict, recursion_depth: int = 0
+) -> bool:
     """
-    Recursively validates a block of a plan, now with recursion detection and FSM-switching.
+    Recursively validates a list of commands against a given FSM.
     """
     if recursion_depth > MAX_RECURSION_DEPTH:
-        print(f"Error: Max recursion depth ({MAX_RECURSION_DEPTH}) exceeded.", file=sys.stderr)
-        sys.exit(1)
+        print(
+            f"Error: Max recursion depth ({MAX_RECURSION_DEPTH}) exceeded.",
+            file=sys.stderr,
+        )
+        return False
 
-    i = start_index
+    state = fsm["start_state"]
 
-    # --- FSM Switching Logic ---
-    current_fsm = fsm
-    # An FSM directive is only valid as the first non-empty line of a plan file.
-    if start_index == 0 and lines:
-        first_line_content = lines[0][1].strip()
-        if first_line_content.startswith("# FSM:"):
-            fsm_path = first_line_content.split(":", 1)[1].strip()
-            # The path in the directive is relative to the repo root.
-            full_fsm_path = os.path.join(ROOT_DIR, fsm_path)
-            try:
-                with open(full_fsm_path, "r") as f:
-                    current_fsm = json.load(f)
-                print(f"  Switched to FSM: {fsm_path}")
-                # Reset state to the start state of the new FSM
-                state = current_fsm["start_state"]
-            except (FileNotFoundError, json.JSONDecodeError) as e:
-                print(
-                    f"Error on line 1: Could not load FSM from '{fsm_path}'. {e}",
-                    file=sys.stderr,
-                )
-                sys.exit(1)
-
-    while i < len(lines):
-        line_num, line_content = lines[i]
-        current_indent = len(line_content) - len(line_content.lstrip(" "))
-
-        if current_indent < indent_level:
-            return state, fs, i, current_fsm  # End of current block
-
-        if current_indent > indent_level:
+    for i, command in enumerate(commands):
+        action_type = ACTION_TYPE_MAP.get(command.tool_name)
+        if not action_type:
             print(
-                f"Error on line {line_num+1}: Unexpected indentation.", file=sys.stderr
+                f"Error in command {i+1} ('{command.tool_name}'): Unknown tool.",
+                file=sys.stderr,
             )
-            sys.exit(1)
+            return False
 
-        line_content = line_content.strip()
-        if line_content.startswith("# FSM:"):  # Ignore directive during validation
-            i += 1
-            continue
+        transitions = fsm["transitions"].get(state)
+        if not transitions or action_type not in transitions:
+            print(
+                f"Error in command {i+1} ('{command.tool_name}'): Invalid FSM transition. "
+                f"Cannot perform '{action_type}' from state '{state}'.",
+                file=sys.stderr,
+            )
+            return False
 
-        command = line_content.split()[0]
-        args = line_content.split()[1:]
-
-        if command == "call_plan":
-            plan_name_or_path = args[0]
+        # Handle hierarchical validation for 'call_plan'
+        if command.tool_name == "call_plan":
+            plan_name_or_path = command.args_text.strip()
             registry = _load_plan_registry()
             sub_plan_path = registry.get(plan_name_or_path, plan_name_or_path)
 
@@ -247,74 +171,39 @@ def _validate_plan_recursive(
                 with open(sub_plan_path, "r") as f:
                     sub_plan_content = f.read()
                 sub_commands = parse_plan(sub_plan_content)
+                print(f"  Validating sub-plan '{sub_plan_path}'...")
+                if not _validate_plan_recursive(sub_commands, fsm, recursion_depth + 1):
+                    print(
+                        f"Error: Sub-plan '{sub_plan_path}' is invalid.",
+                        file=sys.stderr,
+                    )
+                    return False
+                print(f"  Sub-plan '{sub_plan_path}' is valid.")
+
             except FileNotFoundError:
-                print(f"Error: Sub-plan file not found at '{sub_plan_path}'.", file=sys.stderr)
-                sys.exit(1)
-
-            print(f"  Line {line_num+1}: Validating sub-plan '{sub_plan_path}'...")
-            sub_final_state, _, _, sub_fsm = _validate_plan_recursive(
-                sub_plan_lines,
-                0,
-                0,
-                "DUMMY_STATE",
-                fs.copy(),
-                {},
-                current_fsm,
-                recursion_depth + 1,
-            )
-
-            if sub_final_state not in sub_fsm["accept_states"]:
                 print(
-                    f"Error in sub-plan '{sub_plan_path}': Plan does not end in an accepted state.",
+                    f"Error: Sub-plan file not found at '{sub_plan_path}'.",
                     file=sys.stderr,
                 )
-                sys.exit(1)
-            print(f"  Sub-plan '{sub_plan_path}' is valid. Resuming parent plan.")
-            i += 1
-        elif command == "for_each_file":
-            loop_depth = len(placeholders) + 1
-            placeholder_key = f"{{file{loop_depth}}}"
-            dummy_file = f"dummy_file_for_loop_{loop_depth}"
+                return False
 
-            loop_body_start = i + 1
-            j = loop_body_start
-            while (
-                j < len(lines)
-                and (len(lines[j][1]) - len(lines[j][1].lstrip(" "))) > indent_level
-            ):
-                j += 1
+        # Transition to the next state
+        state = transitions[action_type]
+        print(f"  OK: '{command.tool_name}' transitions state to '{state}'")
 
-            loop_fs = fs.copy()
-            loop_fs.add(dummy_file)
-            new_placeholders = placeholders.copy()
-            new_placeholders[placeholder_key] = dummy_file
+    if state not in fsm["accept_states"]:
+        print(
+            f"\nValidation failed. Plan ends in non-accepted state: '{state}'",
+            file=sys.stderr,
+        )
+        return False
 
-            state, loop_fs, _, _ = _validate_plan_recursive(
-                lines,
-                loop_body_start,
-                indent_level + 2,
-                state,
-                loop_fs,
-                new_placeholders,
-                current_fsm,
-                recursion_depth,
-            )
-
-            fs.update(loop_fs)
-            i = j
-        else:
-            state, fs = _validate_action(
-                line_num, line_content, state, current_fsm, fs, placeholders
-            )
-            i += 1
-
-    return state, fs, i, current_fsm
+    return True
 
 
 def validate_plan(plan_filepath):
-    """Validates a plan using the centralized parser."""
+    """Validates a plan using the centralized parser and recursive validator."""
     try:
-        # Load the default FSM. The recursive validator will switch if a directive is found.
         with open(FSM_DEF_PATH, "r") as f:
             default_fsm = json.load(f)
         with open(plan_filepath, "r") as f:
@@ -323,24 +212,28 @@ def validate_plan(plan_filepath):
         print(f"Error: Could not find file {e.filename}", file=sys.stderr)
         sys.exit(1)
 
+    # Check for FSM override directive
+    fsm_to_use = default_fsm
+    first_line = plan_content.splitlines()[0] if plan_content.splitlines() else ""
+    if first_line.startswith("# FSM:"):
+        fsm_path = first_line.split(":", 1)[1].strip()
+        full_fsm_path = os.path.join(ROOT_DIR, fsm_path)
+        try:
+            with open(full_fsm_path, "r") as f:
+                fsm_to_use = json.load(f)
+            print(f"--- Using FSM specified in plan: {fsm_path} ---")
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            print(f"Error: Could not load FSM from '{fsm_path}'. {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print("--- Using default FSM ---")
+
     commands = parse_plan(plan_content)
 
-    simulated_fs = set()
-    for root, dirs, files in os.walk("."):
-        if ".git" in dirs:
-            dirs.remove(".git")
-        for name in files:
-            simulated_fs.add(os.path.join(root, name).replace("./", ""))
-
-    print(f"Starting validation with {len(simulated_fs)} files pre-loaded...")
-    final_state, _, _, final_fsm = _validate_plan_recursive(
-        lines, 0, 0, default_fsm["start_state"], simulated_fs, {}, default_fsm, 0
-    )
-
-    if final_state in final_fsm["accept_states"]:
-        print("\nValidation successful! Plan is syntactically and semantically valid.")
+    print(f"Starting validation for '{plan_filepath}'...")
+    if _validate_plan_recursive(commands, fsm_to_use):
+        print("\nValidation successful! Plan is valid.")
     else:
-        print(f"\nValidation failed. Plan ends in non-accepted state: '{final_state}'", file=sys.stderr)
         sys.exit(1)
 
 
@@ -429,9 +322,7 @@ def main():
     lint_parser = subparsers.add_parser(
         "lint", help="Runs all validation and analysis checks on a plan."
     )
-    lint_parser.add_argument(
-        "plan_file", help="The path to the plan file to lint."
-    )
+    lint_parser.add_argument("plan_file", help="The path to the plan file to lint.")
 
     args = parser.parse_args()
     if args.command == "close":

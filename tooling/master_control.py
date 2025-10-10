@@ -30,6 +30,7 @@ state. This creates a robust, interactive loop where the orchestrator directs
 the high-level state, and the agent is responsible for completing the work
 required to advance that state.
 """
+
 import json
 import sys
 import time
@@ -44,9 +45,12 @@ from state import AgentState, PlanContext
 from fdc_cli import MAX_RECURSION_DEPTH
 from research import execute_research_protocol
 from research_planner import plan_deep_research
+from plan_parser import parse_plan
 
 PLAN_REGISTRY_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "knowledge_core", "plan_registry.json")
+    os.path.join(
+        os.path.dirname(__file__), "..", "knowledge_core", "plan_registry.json"
+    )
 )
 
 
@@ -60,6 +64,7 @@ def _load_plan_registry():
     except (json.JSONDecodeError, IOError):
         return {}
 
+
 class MasterControlGraph:
     """
     A Finite State Machine (FSM) that enforces the agent's protocol.
@@ -67,10 +72,11 @@ class MasterControlGraph:
     ensuring that all protocol steps are followed in the correct order.
     """
 
-    def __init__(self, fsm_path: str = "tooling/fsm.json"):
+    def __init__(self, fsm_path: str = "tooling/fsm.json", native_tools: dict = None):
         with open(fsm_path, "r") as f:
             self.fsm = json.load(f)
         self.current_state = self.fsm["initial_state"]
+        self.native_tools = native_tools or {}
 
     def get_trigger(self, source_state: str, dest_state: str) -> str:
         """Finds the trigger for a transition between two states."""
@@ -95,7 +101,7 @@ class MasterControlGraph:
                 "scope": "file",
                 "path": "knowledge_core/agent_meta.json",
             }
-            agent_meta = execute_research_protocol(l1_constraints)
+            agent_meta = execute_research_protocol(l1_constraints, self.native_tools)
             agent_state.messages.append(
                 {
                     "role": "system",
@@ -110,7 +116,7 @@ class MasterControlGraph:
                 "scope": "directory",
                 "path": "knowledge_core/",
             }
-            repo_state = execute_research_protocol(l2_constraints)
+            repo_state = execute_research_protocol(l2_constraints, self.native_tools)
             agent_state.messages.append(
                 {
                     "role": "system",
@@ -146,18 +152,6 @@ class MasterControlGraph:
             agent_state.error = f"Orientation failed: {e}"
             print(f"[MasterControl] Orientation Failed: {e}")
             return self.get_trigger("ORIENTING", "ERROR")
-
-    def get_trigger(self, source_state: str, dest_state: str) -> str:
-        """Finds the trigger for a transition between two states."""
-        for transition in self.fsm["transitions"]:
-            if (
-                transition["source"] == source_state
-                and transition["dest"] == dest_state
-            ):
-                return transition["trigger"]
-        raise ValueError(
-            f"No trigger found for transition from {source_state} to {dest_state}"
-        )
 
     def do_planning(self, agent_state: AgentState) -> str:
         """
@@ -235,7 +229,12 @@ class MasterControlGraph:
         # 2. Validate the plan against the research FSM
         print(f"  - Validating '{research_plan_file}' against research FSM...")
         # The updated fdc_cli now reads the # FSM: directive from the plan file.
-        validation_cmd = ["python3", "tooling/fdc_cli.py", "validate", research_plan_file]
+        validation_cmd = [
+            "python3",
+            "tooling/fdc_cli.py",
+            "validate",
+            research_plan_file,
+        ]
         result = subprocess.run(validation_cmd, capture_output=True, text=True)
 
         if result.returncode != 0:
@@ -247,12 +246,10 @@ class MasterControlGraph:
 
         # 3. Push the validated research plan onto the execution stack
         print("  - Research plan is valid. Pushing to execution stack.")
-        plan_lines = [
-            line for line in research_plan_content.splitlines()
-            if line.strip() and not line.strip().startswith("#")
-        ]
+        # The plan must be parsed into Command objects before being added to the stack.
+        parsed_commands = parse_plan(research_plan_content)
         agent_state.plan_stack.append(
-            PlanContext(plan_path=research_plan_file, plan_content=plan_lines)
+            PlanContext(plan_path=research_plan_file, commands=parsed_commands)
         )
         agent_state.messages.append(
             {
@@ -292,9 +289,7 @@ class MasterControlGraph:
         current_context.current_step += 1
 
         # Push the new plan onto the stack
-        new_context = PlanContext(
-            plan_path=sub_plan_path, commands=parsed_sub_commands
-        )
+        new_context = PlanContext(plan_path=sub_plan_path, commands=parsed_sub_commands)
         agent_state.plan_stack.append(new_context)
         return self.get_trigger("EXECUTING", "EXECUTING")
 
@@ -336,7 +331,9 @@ class MasterControlGraph:
                 "knowledge_core", "reset_all_authorization.token"
             )
             if not os.path.exists(auth_token_path):
-                error_message = "Unauthorized use of 'reset_all'. Authorization token not found."
+                error_message = (
+                    "Unauthorized use of 'reset_all'. Authorization token not found."
+                )
                 agent_state.error = error_message
                 print(f"[MasterControl] Protocol Violation: {error_message}")
                 return self.get_trigger("EXECUTING", "ERROR")
@@ -496,7 +493,9 @@ class MasterControlGraph:
             return self.get_trigger("SELF_CORRECTING", "AWAITING_SUBMISSION")
 
         except Exception as e:
-            agent_state.error = f"An unexpected error occurred during the self-correction cycle: {e}"
+            agent_state.error = (
+                f"An unexpected error occurred during the self-correction cycle: {e}"
+            )
             print(f"[MasterControl] {agent_state.error}")
             return self.get_trigger("SELF_CORRECTING", "ERROR")
 
