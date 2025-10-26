@@ -22,7 +22,7 @@ jobs:
           cache: 'pip'
 
       - name: Install Dependencies
-        run: pip install jsonschema
+        run: pip install -r requirements.txt
 
       - name: Run Dependency Graph Generator
         run: python tooling/dependency_graph_generator.py
@@ -30,12 +30,15 @@ jobs:
       - name: Run Symbol Map Generator
         run: python tooling/symbol_map_generator.py
 
+      - name: Run AST Generator
+        run: python tooling/ast_generator.py
+
       - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore(knowledge): Automatically update Knowledge Core artifacts"
           commit_options: '--no-verify'
-          file_pattern: 'knowledge_core/dependency_graph.json knowledge_core/symbols.json'
+          file_pattern: 'knowledge_core/'
           repository: .
           commit_user_name: Jules Agent
           commit_user_email: jules.agent@example.com

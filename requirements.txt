@@ -4,3 +4,10 @@ requests
 black
 flake8
 rdflib
+tree-sitter
+tree-sitter-python
+tree-sitter-javascript
+tree-sitter-typescript
+tree-sitter-ruby
+tree-sitter-go
+tree-sitter-rust
