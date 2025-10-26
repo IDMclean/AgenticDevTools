@@ -1,6 +1,8 @@
 # JulesPlayground/lab.py
 
 import logging
+import sys
+sys.path.append("JulesPlayground")
 from student_agent import StudentAgent
 
 def main():
@@ -22,7 +24,7 @@ def main():
 
     # Create and run the student agent
     agent = StudentAgent()
-    agent.run()
+    agent.run("jules_trigger")
 
     logger.info("--- Experiment Finished ---")
 

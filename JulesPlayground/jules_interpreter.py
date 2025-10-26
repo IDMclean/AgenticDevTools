@@ -1,6 +1,7 @@
 # JulesPlayground/jules_interpreter.py
 
 from jules_ast import *
+from jules_knowledge import write_file
 
 class TypeCheckError(Exception):
     pass
@@ -119,4 +120,5 @@ def get_default_env():
     return {
         "eval": Primitive(lambda t: interpret(t.term, get_default_env()), TFun(TAST(), TAST())),
         "print": Primitive(lambda t: print(t.value), TFun(TString(), TString())),
+        "write_file": Primitive(lambda t: write_file(t.e1.value, t.e2.value), TFun(TString(), TFun(TString(), TString()))),
     }
