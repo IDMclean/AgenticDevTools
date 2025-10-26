@@ -32,7 +32,7 @@ class Parser:
         elif token.startswith('"'):
             self.consume()
             return String(token[1:-1])
-        elif token and token not in ['let', 'in', 'fn', '(', ')', ',', '=>', ':', 'eval', 'AST']:
+        elif token and token not in ['let', 'in', 'fn', '(', ')', ',', '=>', ':', 'eval', 'AST', '!', 'letbang']:
             self.consume()
             return Var(token)
         elif token == '(':
@@ -46,6 +46,9 @@ class Parser:
             term = self.parse_expr()
             self.consume(')')
             return AST(term)
+        elif token == '!':
+            self.consume('!')
+            return Promote(self.parse_atom())
         else:
             raise ValueError(f"Unexpected token: {token}")
 
@@ -75,6 +78,15 @@ class Parser:
             self.consume('in')
             e2 = self.parse_expr()
             return App(Fun(var, type, e2), e1) # Desugar let
+        if token == 'letbang':
+            self.consume('letbang')
+            self.consume('!')
+            var = self.consume()
+            self.consume('=')
+            e1 = self.parse_expr()
+            self.consume('in')
+            e2 = self.parse_expr()
+            return LetBang(var, e1, e2)
         return self.parse_app()
 
     def parse_type(self):
@@ -91,6 +103,9 @@ class Parser:
         elif token == 'AST':
             self.consume()
             return TAST()
+        elif token == '!':
+            self.consume('!')
+            return TExponential(self.parse_type())
         elif token == '(':
             self.consume('(')
             t1 = self.parse_type()
@@ -103,7 +118,7 @@ class Parser:
 
 def parse(s: str) -> Term:
     s = s.strip()
-    tokens = re.findall(r'\(|\)|,|=>|->|=|\b(?:let|in|fn|AST|Int|String|Bool)\b|:|\w+|"[^"]*"', s)
+    tokens = re.findall(r'\(|\)|,|=>|->|=|\b(?:let|in|fn|AST|Int|String|Bool|letbang)\b|:|\w+|"[^"]*"|!', s)
     tokens = [t for t in tokens if t and not t.isspace()]
     print(f"Tokens: {tokens}")
     parser = Parser(tokens)

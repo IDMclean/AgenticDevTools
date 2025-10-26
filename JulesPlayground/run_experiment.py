@@ -1,7 +1,7 @@
 # JulesPlayground/run_experiment.py
 
 import jules_trigger
-from jules_interpreter import interpret, get_default_env, Primitive
+from jules_interpreter import interpret, get_default_env, Primitive, TFun, TString
 from jules_knowledge import print_value
 from jules_parser import parse
 
@@ -14,7 +14,7 @@ def main():
 
     # Create the environment
     env = get_default_env()
-    env["print"] = Primitive(print_value)
+    env["print"] = Primitive(print_value, TFun(TString(), TString()))
 
     # Parse and interpret the program
     try:

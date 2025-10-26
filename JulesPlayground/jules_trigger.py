@@ -4,5 +4,8 @@
 # The task is to "fix" the following "errors" in the `program` variable.
 
 program = """
-print("hello world")
+let resource: !String = !(String("secret")) in
+letbang !x = resource in
+letbang !y = resource in
+print(x)
 """

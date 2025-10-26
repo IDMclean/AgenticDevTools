@@ -27,7 +27,13 @@ class TAST:
     def __repr__(self):
         return "TAST"
 
-Type = Union[TInt, TString, TBool, TFun, TAST]
+class TExponential:
+    def __init__(self, t):
+        self.t = t
+    def __repr__(self):
+        return f"!{self.t}"
+
+Type = Union[TInt, TString, TBool, TFun, TAST, TExponential]
 
 # --- Terms ---
 
@@ -70,4 +76,18 @@ class AST:
     def __repr__(self):
         return f"AST({self.term})"
 
-Term = Union[Var, Int, String, App, Fun, AST]
+class Promote:
+    def __init__(self, e):
+        self.e = e
+    def __repr__(self):
+        return f"Promote({self.e})"
+
+class LetBang:
+    def __init__(self, v, e1, e2):
+        self.v = v
+        self.e1 = e1
+        self.e2 = e2
+    def __repr__(self):
+        return f"LetBang(!{self.v}, {self.e1}, {self.e2})"
+
+Term = Union[Var, Int, String, App, Fun, AST, Promote, LetBang]
