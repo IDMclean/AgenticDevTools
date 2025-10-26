@@ -25,6 +25,10 @@ KEY_FILES_TO_DOCUMENT = [
     "doc_generator.py",
     "protocol_auditor.py",
     "self_improvement_cli.py",
+    "knowledge_compiler.py",
+    "plan_parser.py",
+    "research.py",
+    "self_correction_orchestrator.py",
 ]
 
 # --- Static Content ---
