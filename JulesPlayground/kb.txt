@@ -1,0 +1,6 @@
+# JulesPlayground/kb.txt
+
+This is a simple knowledge base.
+It contains information that the student agent can use to solve the koan.
+For example, it might contain a hint about the nature of the "errors" in the trigger file.
+"undefined variable" is a hint.
